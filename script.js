@@ -10,6 +10,27 @@ import {
     AlertCircle, RefreshCw, Store
 } from 'lucide-react';
 
+const __ga = {
+    started: false,
+    loadedSent: false,
+    endedSent: false
+};
+
+function trackEvent(name, params = {}) {
+    try {
+        if (typeof window.gtag === 'function') {
+            window.gtag('event', name, params);
+        }
+    } catch (e) {
+        // fail silently
+    }
+}
+
+function safeNum(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : undefined;
+}
+
 // --- HAPTIC FEEDBACK ---
 const haptic = {
     light: () => navigator.vibrate?.(10),
@@ -719,7 +740,7 @@ const QuickLogSection = ({ recentFoods, onQuickAdd, yesterdayItems, onCopyYester
     );
 };
 
-const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavigate, onImport }) => {
+const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavigate, onImport, selectedDate }) => {
     const [formData, setFormData] = useState({ 
         currentWeight: profile.currentWeight || '', 
         goalWeight: profile.goalWeight || '', 
@@ -748,6 +769,7 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
     const handleExport = () => {
         haptic.light();
         DB.downloadExport();
+        trackEvent('export_csv', { date: selectedDate });
     };
 
     const handleFileSelect = (e) => {
@@ -1794,6 +1816,8 @@ const Steady = () => {
     const [toast, setToast] = useState(null);
     const [undoStack, setUndoStack] = useState([]);
     const [streakAnimating, setStreakAnimating] = useState(false);
+    const viewChangeRef = useRef(false);
+    const dateChangeRef = useRef(false);
 
     // NEW: State for editing item
     const [editingItem, setEditingItem] = useState(null);
@@ -1811,6 +1835,51 @@ const Steady = () => {
             if (days > 14) setShowWeightModal(true);
         }
     }, []);
+
+    useEffect(() => {
+        if (!__ga.loadedSent) {
+            __ga.loadedSent = true;
+            trackEvent('app_loaded');
+        }
+        if (!__ga.started) {
+            __ga.started = true;
+            trackEvent('session_start');
+        }
+        const handleVisibility = () => {
+            if (document.visibilityState === 'hidden' && !__ga.endedSent) {
+                __ga.endedSent = true;
+                trackEvent('session_end', { reason: 'hidden' });
+            }
+        };
+        const handleUnload = () => {
+            if (!__ga.endedSent) {
+                __ga.endedSent = true;
+                trackEvent('session_end', { reason: 'unload' });
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('beforeunload', handleUnload);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('beforeunload', handleUnload);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!viewChangeRef.current) {
+            viewChangeRef.current = true;
+            return;
+        }
+        trackEvent('view_changed', { view });
+    }, [view]);
+
+    useEffect(() => {
+        if (!dateChangeRef.current) {
+            dateChangeRef.current = true;
+            return;
+        }
+        trackEvent('date_changed', { date: selectedDate });
+    }, [selectedDate]);
 
     useEffect(() => { 
         document.documentElement.classList.toggle('dark', isDark); 
@@ -1849,12 +1918,25 @@ const Steady = () => {
             const newItems = [...logs.items];
             newItems[editingItem.index] = { ...food, loggedAt: editingItem.item.loggedAt };
             updateLog({ items: newItems });
+            trackEvent('food_edited', {
+                calories: safeNum(food.calories),
+                protein: safeNum(food.protein),
+                date: selectedDate,
+                view
+            });
             setEditingItem(null);
             setToast({ message: `Updated ${food.name.split(' (')[0]}`, type: 'success' });
         } else {
             // Logic for Adding New
             const newItems = [...(logs?.items || []), food];
             updateLog({ items: newItems });
+            trackEvent('food_logged', {
+                calories: safeNum(food.calories),
+                protein: safeNum(food.protein),
+                is_quick_add: false,
+                date: selectedDate,
+                view
+            });
             
             if (food.name && food.name !== 'Quick Add') {
                 DB.addRecentFood(food);
@@ -1862,7 +1944,7 @@ const Steady = () => {
             }
             setToast({ message: `Added ${food.name.split(' (')[0]}`, type: 'success' });
         }
-    }, [logs, updateLog, editingItem]);
+    }, [logs, updateLog, editingItem, selectedDate, view]);
 
     const handleEditClick = useCallback((index) => {
         const item = logs.items[index];
@@ -1876,12 +1958,19 @@ const Steady = () => {
         // We manually call the add logic here instead of handleAdd to avoid edit state confusion
         const newItems = [...(logs?.items || []), newFood];
         updateLog({ items: newItems });
+        trackEvent('food_logged', {
+            calories: safeNum(food.calories),
+            protein: safeNum(food.protein),
+            is_quick_add: true,
+            date: selectedDate,
+            view
+        });
         if (food.name && food.name !== 'Quick Add') {
             DB.addRecentFood(food);
             setRecentFoods(DB.getRecentFoods());
         }
         setToast({ message: `Added ${food.name.split(' (')[0]}`, type: 'success' });
-    }, [logs, updateLog]);
+    }, [logs, updateLog, selectedDate, view]);
 
     const handleCopyYesterday = useCallback(() => {
         const yesterdayLog = DB.getLog(getYesterdayStr());
@@ -1894,7 +1983,7 @@ const Steady = () => {
             updateLog({ items: [...(logs?.items || []), ...copiedItems] });
             setToast({ message: `Copied ${copiedItems.length} items from yesterday`, type: 'success' });
         }
-    }, [logs, updateLog]);
+    }, [logs, updateLog, selectedDate, view]);
 
     const handleSaveCustom = useCallback((customFood) => {
         DB.addRecentFood(customFood);
@@ -1910,13 +1999,17 @@ const Steady = () => {
         setUndoStack(prev => [...prev, { item, index: idx }]);
         
         updateLog({ items: newItems });
+        trackEvent('food_deleted', {
+            date: selectedDate,
+            view
+        });
         
         setToast({
             message: `Removed ${item.name}`,
             action: 'Undo',
             type: 'info'
         });
-    }, [logs, updateLog]);
+    }, [logs, updateLog, selectedDate, view]);
 
     const handleUndo = useCallback(() => {
         if (undoStack.length === 0) return;
@@ -1927,8 +2020,12 @@ const Steady = () => {
         const newItems = [...(logs?.items || [])];
         newItems.splice(lastUndo.index, 0, lastUndo.item);
         updateLog({ items: newItems });
+        trackEvent('food_delete_undone', {
+            date: selectedDate,
+            view
+        });
         setToast(null);
-    }, [undoStack, logs, updateLog]);
+    }, [undoStack, logs, updateLog, selectedDate, view]);
     
     const handleWater = useCallback((amt) => {
         haptic.light();
@@ -1940,6 +2037,7 @@ const Steady = () => {
         setProfile(newProfile);
         DB.saveProfile(newProfile);
         DB.saveWeightLog({ date: getTodayStr(), weight: safeInt(w) });
+        trackEvent('weight_logged');
     }, [profile]);
 
     const changeDate = useCallback((days) => {
@@ -2102,6 +2200,7 @@ const Steady = () => {
                                 toggleTheme={() => setIsDark(!isDark)} 
                                 isDark={isDark} 
                                 onNavigate={setView} 
+                                selectedDate={selectedDate}
                             />
                         )}
                         {view === 'weekly' && <WeeklyView userId="local" />}
