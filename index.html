@@ -1,51 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Steady</title>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XER9SVKX9B"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+  <title>Steady</title>
 
-      gtag('config', 'G-XER9SVKX9B');
-    </script>
+  <!-- PWA + theme colors -->
+  <meta name="theme-color" content="#FDFBF7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Steady" />
 
-    <meta name="theme-color" content="#FDFBF7" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Steady">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
+  <!-- Icons -->
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="icons/steady-favicon-32.png" />
+  <link rel="apple-touch-icon" href="icons/steady-192.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
 
-    <link rel="stylesheet" href="style.css">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XER9SVKX9B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+    gtag("config", "G-XER9SVKX9B");
+  </script>
 
+  <!-- App styles -->
+  <link rel="stylesheet" href="style.css" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        stone: {
-                            50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1',
-                            400: '#a8a29e', 500: '#78716c', 600: '#57534e', 700: '#44403c',
-                            800: '#292524', 900: '#1c1917', 950: '#0c0a09',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
-                    }
-                }
+  <!-- Tailwind CDN (for this tester build only) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            stone: {
+              50: "#fafaf9",
+              100: "#f5f5f4",
+              200: "#e7e5e4",
+              300: "#d6d3d1",
+              400: "#a8a29e",
+              500: "#78716c",
+              600: "#57534e",
+              700: "#44403c",
+              800: "#292524",
+              900: "#1c1917",
+              950: "#0c0a09"
             }
+          },
+          fontFamily: {
+            sans: [
+              "ui-sans-serif",
+              "system-ui",
+              "-apple-system",
+              "BlinkMacSystemFont",
+              '"Segoe UI"',
+              "Roboto",
+              '"Helvetica Neue"',
+              "Arial",
+              "sans-serif"
+            ]
+          }
         }
-    </script>
+      }
+    };
+  </script>
 
-    <script type="importmap">
+  <!-- React via import maps -->
+  <script type="importmap">
     {
       "imports": {
         "react": "https://esm.sh/react@18.2.0",
@@ -53,13 +85,32 @@
         "lucide-react": "https://esm.sh/lucide-react@0.294.0"
       }
     }
-    </script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </script>
+
+  <!-- Babel Standalone for JSX compilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-[#FDFBF7] dark:bg-stone-950 transition-colors duration-300">
-    <div id="root"></div>
+  <div id="root">
+    <!-- Initial loading shell while React + JS load, also used when offline -->
+    <div
+      class="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-stone-950 gap-4"
+    >
+      <div class="w-40 h-4 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+        <div class="h-full w-3/4 bg-emerald-600 rounded-full animate-pulse"></div>
+      </div>
+      <p class="text-stone-700 dark:text-stone-300 text-sm tracking-wide">
+        Balancing your day…
+      </p>
+    </div>
+  </div>
 
-    <script type="text/babel" data-type="module" src="script.js"></script>
-
+  <!-- React entry: use Babel to transpile JSX with env+react presets in module mode -->
+  <script
+    type="text/babel"
+    data-type="module"
+    data-presets="env,react"
+    src="script.js"
+  ></script>
 </body>
 </html>
