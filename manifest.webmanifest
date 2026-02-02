@@ -1,26 +1,41 @@
 {
   "name": "Steady",
   "short_name": "Steady",
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#FDFBF7",
-  "theme_color": "#0c0a09",
+  "background_color": "#FFFFFF",
+  "theme_color": "#EAF4FF",
+  "scope": "/",
   "icons": [
     {
-      "src": "icons/steady-192.png",
+      "src": "icons/steady-icon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/steady-icon-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/steady-icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/steady-icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/steady-icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icons/steady-512.png",
+      "src": "icons/steady-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "icons/steady-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ]
 }
