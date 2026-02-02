@@ -492,7 +492,7 @@ const Toast = ({ message, action, onAction, onClose, type = 'info' }) => {
         return () => clearTimeout(timer);
     }, [onClose]);
 
-    const bgColor = type === 'success' ? 'bg-emerald-800' : type === 'error' ? 'bg-red-800' : 'bg-stone-800';
+    const bgColor = type === 'success' ? 'bg-violet-800' : type === 'error' ? 'bg-red-800' : 'bg-stone-800';
 
     return (
         <div className={`fixed bottom-24 left-4 right-4 ${bgColor} text-white p-4 rounded-2xl shadow-2xl z-[100] animate-slide-in-up flex items-center justify-between gap-3`}>
@@ -526,7 +526,7 @@ const WeightUpdateModal = ({ isOpen, onClose, currentWeight, onUpdate }) => {
                         pattern="[0-9]*" 
                         value={weight} 
                         onChange={(e) => setWeight(e.target.value)} 
-                        className="w-full p-4 text-center text-2xl font-bold bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" 
+                        className="w-full p-4 text-center text-2xl font-bold bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" 
                         autoFocus 
                     />
                     <span className="absolute right-8 top-5 text-stone-400 text-sm font-medium">lbs</span>
@@ -555,7 +555,7 @@ const WeightGraph = ({ data }) => {
             <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm mt-6">
                 <div className="flex justify-between items-end mb-4">
                     <h4 className="font-bold text-stone-700 dark:text-stone-200">Weight Trend</h4>
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-lg">First entry!</span>
+                    <span className="text-xs text-violet-600 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-lg">First entry!</span>
                 </div>
                 <div className="flex items-center justify-center h-24 bg-stone-50 dark:bg-stone-800 rounded-2xl">
                     <div className="text-center">
@@ -587,7 +587,7 @@ const WeightGraph = ({ data }) => {
             <div className="flex justify-between items-end mb-4">
                 <h4 className="font-bold text-stone-700 dark:text-stone-200">Weight Trend</h4>
                 <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${change < 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : change > 0 ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-stone-100 dark:bg-stone-800 text-stone-500'}`}>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${change < 0 ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300' : change > 0 ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-stone-100 dark:bg-stone-800 text-stone-500'}`}>
                         {change > 0 ? '+' : ''}{change.toFixed(1)} lbs
                     </span>
                 </div>
@@ -619,7 +619,7 @@ const SupportView = ({ onBack }) => {
                 <h2 className="text-xl font-bold text-stone-800 dark:text-stone-100">Support Steady</h2>
             </div>
             <div className="bg-white dark:bg-stone-900 p-8 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 text-center">
-                <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-20 h-20 bg-violet-50 dark:bg-violet-900/30 text-teal-700 dark:text-teal-300 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Heart size={40} fill="currentColor" />
                 </div>
                 <h3 className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-4">Independent & Free</h3>
@@ -679,13 +679,13 @@ const InsightCard = ({ proteinRemaining, caloriesRemaining, proteinTarget }) => 
     
     const colors = {
         warning: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800',
-        success: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800',
+        success: 'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800',
         close: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
     };
     
     const iconColors = {
         warning: 'text-amber-600 dark:text-amber-400',
-        success: 'text-emerald-600 dark:text-emerald-400',
+        success: 'text-violet-600 dark:text-violet-300',
         close: 'text-blue-600 dark:text-blue-400'
     };
 
@@ -741,7 +741,7 @@ const QuickLogSection = ({ recentFoods, onQuickAdd, yesterdayItems, onCopyYester
                             <button
                                 key={idx}
                                 onClick={() => { haptic.light(); onQuickAdd(food); }}
-                                className="shrink-0 px-4 py-3 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-2xl shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800 transition-all active:scale-95"
+                                className="shrink-0 px-4 py-3 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-2xl shadow-sm hover:shadow-md hover:border-violet-200 dark:hover:border-violet-800 transition-all active:scale-95"
                             >
                                 <div className="text-sm font-medium text-stone-700 dark:text-stone-200 whitespace-nowrap">{food.name.split(' (')[0]}</div>
                                 <div className="text-xs text-stone-400 mt-0.5">{food.protein}g • {food.calories} cal</div>
@@ -811,15 +811,15 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
     return (
         <div className="p-4 space-y-6 animate-fade-in">
             {importStatus && (
-                <div className={`p-4 rounded-2xl text-center font-medium ${importStatus.success ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
+                <div className={`p-4 rounded-2xl text-center font-medium ${importStatus.success ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
                     {importStatus.message}
                     {importStatus.success && <span className="block text-xs mt-1">Reloading...</span>}
                 </div>
             )}
             
-            <button onClick={() => onNavigate('support')} className="w-full bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-800 flex items-center justify-between group active:scale-[0.98] transition-transform">
+            <button onClick={() => onNavigate('support')} className="w-full bg-violet-50 dark:bg-violet-900/20 p-4 rounded-3xl border border-violet-100 dark:border-violet-800 flex items-center justify-between group active:scale-[0.98] transition-transform">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white dark:bg-stone-800 rounded-full text-emerald-600 dark:text-emerald-400 shadow-sm">
+                    <div className="p-2 bg-white dark:bg-stone-800 rounded-full text-violet-600 dark:text-violet-300 shadow-sm">
                         <Heart size={20} fill="currentColor" className="opacity-80" />
                     </div>
                     <div className="text-left">
@@ -837,7 +837,7 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
                     </div>
                     <span className="font-bold text-stone-800 dark:text-stone-200">Dark Mode</span>
                 </div>
-                <button onClick={() => { haptic.light(); toggleTheme(); }} className={`w-12 h-6 rounded-full p-1 transition-colors ${isDark ? 'bg-emerald-600' : 'bg-stone-300'}`}>
+                <button onClick={() => { haptic.light(); toggleTheme(); }} className={`w-12 h-6 rounded-full p-1 transition-colors ${isDark ? 'bg-violet-500' : 'bg-stone-300'}`}>
                     <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isDark ? 'translate-x-6' : ''}`} />
                 </button>
             </div>
@@ -874,11 +874,11 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
                     <div className="p-6 pt-0 space-y-4 border-t border-stone-50 dark:border-stone-800 mt-2 animate-fade-in">
                         <div>
                             <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Current Weight</label>
-                            <input type="number" inputMode="numeric" value={formData.currentWeight} onChange={e => setFormData({...formData, currentWeight: e.target.value})} className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" />
+                            <input type="number" inputMode="numeric" value={formData.currentWeight} onChange={e => setFormData({...formData, currentWeight: e.target.value})} className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Goal Weight</label>
-                            <input type="number" inputMode="numeric" value={formData.goalWeight} onChange={e => setFormData({...formData, goalWeight: e.target.value})} className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" />
+                            <input type="number" inputMode="numeric" value={formData.goalWeight} onChange={e => setFormData({...formData, goalWeight: e.target.value})} className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
                         </div>
                         <button onClick={handleSave} disabled={isSaving} className="w-full mt-4 bg-stone-800 dark:bg-stone-700 text-stone-50 py-4 rounded-2xl font-bold hover:bg-stone-700 transition-colors active:scale-95 disabled:opacity-50">
                             {isSaving ? 'Recalculating...' : 'Update & Recalculate'}
@@ -944,7 +944,7 @@ const Onboarding = ({ onComplete }) => {
 
     if (step === 0) return (
         <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 text-center animate-fade-in">
-            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-violet-50 dark:bg-violet-900/30 text-teal-700 dark:text-teal-300 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Leaf size={32} />
             </div>
             <div className="mb-8">
@@ -953,7 +953,7 @@ const Onboarding = ({ onComplete }) => {
             </div>
             <div className="w-full text-left space-y-4 text-stone-600 dark:text-stone-400 text-sm mb-8 bg-stone-50 dark:bg-stone-800 p-6 rounded-2xl border border-stone-100 dark:border-stone-700">
                 <div className="flex gap-3">
-                    <div className="mt-1 bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-400 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                    <div className="mt-1 bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</div>
                     <p><strong>Evidence-based.</strong> We use scientific formulas and safety guardrails.</p>
                 </div>
                 <div className="flex gap-3">
@@ -977,24 +977,24 @@ const Onboarding = ({ onComplete }) => {
             <div className="space-y-6 mb-8 w-full">
                 <div>
                     <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Current Weight</label>
-                    <input type="number" inputMode="numeric" value={formData.currentWeight} onChange={e => setFormData({...formData, currentWeight: e.target.value})} className="w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" placeholder="lbs" autoFocus />
+                    <input type="number" inputMode="numeric" value={formData.currentWeight} onChange={e => setFormData({...formData, currentWeight: e.target.value})} className="w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" placeholder="lbs" autoFocus />
                 </div>
                 <div>
                     <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Target Weight</label>
-                    <input type="number" inputMode="numeric" value={formData.goalWeight} onChange={e => setFormData({...formData, goalWeight: e.target.value})} className="w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" placeholder="lbs" />
+                    <input type="number" inputMode="numeric" value={formData.goalWeight} onChange={e => setFormData({...formData, goalWeight: e.target.value})} className="w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" placeholder="lbs" />
                     
                     {/* Updated Healthy Range Nudge */}
                     {healthyRange && !formData.goalWeight && (
-                        <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex gap-2 items-start animate-fade-in">
-                            <Info size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="mt-2 p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex gap-2 items-start animate-fade-in">
+                            <Info size={16} className="text-violet-600 dark:text-violet-300 shrink-0 mt-0.5" />
                             <div className="flex-1">
-                                <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                                <p className="text-xs font-bold text-teal-700 dark:text-teal-300">
                                     Healthy range for your height:
                                 </p>
-                                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-200">
+                                <p className="text-sm font-bold text-violet-700 dark:text-violet-200">
                                     {healthyRange.min} - {healthyRange.max} lbs
                                 </p>
-                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
+                                <p className="text-[10px] text-violet-600 dark:text-violet-300 mt-1">
                                     Based on standard BMI health guidelines.
                                 </p>
                             </div>
@@ -1049,9 +1049,9 @@ const Onboarding = ({ onComplete }) => {
             <h2 className="text-xl font-bold text-stone-800 dark:text-stone-100 mb-2 text-center">Training</h2>
             <div className="space-y-4 mb-8 w-full">
                 {['not_yet', 'sometimes', 'regular'].map(level => (
-                    <label key={level} className="block p-4 rounded-2xl border-2 cursor-pointer transition-all border-stone-100 dark:border-stone-800 hover:border-emerald-100 dark:hover:border-emerald-900 has-[:checked]:border-emerald-700 dark:has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 dark:has-[:checked]:bg-emerald-900/20 active:scale-[0.98]">
+                    <label key={level} className="block p-4 rounded-2xl border-2 cursor-pointer transition-all border-stone-100 dark:border-stone-800 hover:border-violet-100 dark:hover:border-violet-900 has-[:checked]:border-violet-700 dark:has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 dark:has-[:checked]:bg-violet-900/20 active:scale-[0.98]">
                         <div className="flex items-center gap-3">
-                            <input type="radio" name="strengthTrainingLevel" value={level} checked={formData.strengthTrainingLevel === level} onChange={e => setFormData({...formData, strengthTrainingLevel: e.target.value})} className="w-5 h-5 text-emerald-700 border-stone-300 focus:ring-emerald-500" />
+                            <input type="radio" name="strengthTrainingLevel" value={level} checked={formData.strengthTrainingLevel === level} onChange={e => setFormData({...formData, strengthTrainingLevel: e.target.value})} className="w-5 h-5 text-violet-700 border-stone-300 focus:ring-violet-500" />
                             <div>
                                 <span className="block font-bold text-stone-800 dark:text-stone-100">{level === 'not_yet' ? 'Not yet' : level === 'sometimes' ? 'Sometimes' : 'Yes (2+ days/week)'}</span>
                                 <span className="text-xs text-stone-500 dark:text-stone-400">{level === 'not_yet' ? "I'm starting simple." : level === 'sometimes' ? 'A few times a month.' : 'This is part of my routine.'}</span>
@@ -1071,15 +1071,15 @@ const Onboarding = ({ onComplete }) => {
             <h2 className="text-xl font-bold text-stone-800 dark:text-stone-100 mb-2 text-center">Your Blueprint</h2>
             <p className="text-stone-500 text-center text-sm mb-6">Scientific estimates based on your profile.</p>
             <div className="space-y-4 mb-8 w-full">
-                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+                <div className="bg-violet-50 dark:bg-violet-900/20 p-5 rounded-2xl border border-violet-100 dark:border-violet-800">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                            <Utensils size={18} className="text-emerald-800 dark:text-emerald-400" />
-                            <span className="font-bold text-emerald-900 dark:text-emerald-300">Protein</span>
+                            <Utensils size={18} className="text-teal-700 dark:text-teal-300" />
+                            <span className="font-bold text-violet-900 dark:text-violet-300">Protein</span>
                         </div>
                         <div className="text-right">
-                            <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-300">{calculated.proteinTarget}g</div>
-                            <div className="text-xs font-medium text-emerald-700 dark:text-emerald-500">Range: {calculated.proteinMin}-{calculated.proteinMax}g</div>
+                            <div className="text-2xl font-bold text-violet-900 dark:text-violet-300">{calculated.proteinTarget}g</div>
+                            <div className="text-xs font-medium text-violet-700 dark:text-violet-500">Range: {calculated.proteinMin}-{calculated.proteinMax}g</div>
                         </div>
                     </div>
                 </div>
@@ -1109,9 +1109,9 @@ const Onboarding = ({ onComplete }) => {
                 </button>
                 {isAdvancedOpen && (
                     <div className="grid grid-cols-3 gap-2 animate-fade-in">
-                        <input type="number" inputMode="numeric" placeholder={`Pro: ${calculated.proteinTarget}`} onChange={e => setFormData({...formData, manualProtein: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" />
-                        <input type="number" inputMode="numeric" placeholder={`Cal: ${calculated.calories}`} onChange={e => setFormData({...formData, manualCalories: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" />
-                        <input type="number" inputMode="numeric" placeholder={`H2O: ${calculated.water}`} onChange={e => setFormData({...formData, manualWater: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" />
+                        <input type="number" inputMode="numeric" placeholder={`Pro: ${calculated.proteinTarget}`} onChange={e => setFormData({...formData, manualProtein: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
+                        <input type="number" inputMode="numeric" placeholder={`Cal: ${calculated.calories}`} onChange={e => setFormData({...formData, manualCalories: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
+                        <input type="number" inputMode="numeric" placeholder={`H2O: ${calculated.water}`} onChange={e => setFormData({...formData, manualWater: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
                     </div>
                 )}
             </div>
@@ -1143,10 +1143,10 @@ const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, sho
     const isComplete = percentage >= 100;
     
     return (
-        <div className={`bg-white dark:bg-stone-900 p-5 rounded-3xl border transition-all duration-500 relative overflow-hidden ${isComplete ? 'border-emerald-200 dark:border-emerald-800 shadow-md animate-pop' : 'border-stone-100 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]'}`}>
+        <div className={`bg-white dark:bg-stone-900 p-5 rounded-3xl border transition-all duration-500 relative overflow-hidden ${isComplete ? 'border-violet-200 dark:border-violet-800 shadow-md animate-pop' : 'border-stone-100 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]'}`}>
             {isComplete && (
                 <div className="absolute top-2 right-2">
-                    <Sparkles size={16} className="text-emerald-500 animate-confetti" />
+                    <Sparkles size={16} className="text-violet-500 animate-confetti" />
                 </div>
             )}
             <div className="flex justify-between items-end mb-2 relative z-10">
@@ -1171,7 +1171,7 @@ const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, sho
                     </span>
                 )}
                 <span className="ml-auto">
-                    {isComplete ? <span className="text-emerald-600 dark:text-emerald-400 font-bold">Goal Reached!</span> : `${Math.round(100 - percentage)}% to go`}
+                    {isComplete ? <span className="text-violet-600 dark:text-violet-300 font-bold">Goal Reached!</span> : `${Math.round(100 - percentage)}% to go`}
                 </span>
             </div>
         </div>
@@ -1293,7 +1293,7 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
                                 <input 
                                     ref={inputRef}
                                     placeholder="What did you eat?" 
-                                    className="w-full p-4 pl-10 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none" 
+                                    className="w-full p-4 pl-10 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none" 
                                     value={food.name} 
                                     onChange={e => setFood({...food, name: e.target.value})} 
                                     onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
@@ -1318,15 +1318,15 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
                             <div className="flex gap-3">
                                 <div className="flex-1">
                                     <label className="text-xs text-stone-400 ml-1">Protein (g)</label>
-                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 font-bold text-stone-700 dark:text-stone-200 outline-none" value={food.protein} onChange={e => setFood({...food, protein: e.target.value})} />
+                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 font-bold text-stone-700 dark:text-stone-200 outline-none" value={food.protein} onChange={e => setFood({...food, protein: e.target.value})} />
                                 </div>
                                 <div className="flex-1">
                                     <label className="text-xs text-stone-400 ml-1">Calories</label>
-                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 font-bold text-stone-700 dark:text-stone-200 outline-none" value={food.calories} onChange={e => setFood({...food, calories: e.target.value})} />
+                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 font-bold text-stone-700 dark:text-stone-200 outline-none" value={food.calories} onChange={e => setFood({...food, calories: e.target.value})} />
                                 </div>
                             </div>
                             {food.portionTip && (
-                                <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-xl flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
+                                <div className="bg-violet-50 dark:bg-violet-900/30 p-3 rounded-xl flex items-center gap-2 text-xs text-teal-700 dark:text-teal-300">
                                     <Hand size={14} className="shrink-0" />
                                     <span><strong>Portion:</strong> {food.portionTip}</span>
                                 </div>
@@ -1345,19 +1345,19 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
                     <div className="space-y-4">
                         <div>
                             <label className="text-xs text-stone-400 ml-1">Food Name</label>
-                            <input placeholder="e.g. Grandma's Lasagna" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.name} onChange={e => setCustomFood({...customFood, name: e.target.value})} />
+                            <input placeholder="e.g. Grandma's Lasagna" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.name} onChange={e => setCustomFood({...customFood, name: e.target.value})} />
                         </div>
                         <div className="flex gap-3">
                             <div className="flex-1">
                                 <label className="text-xs text-stone-400 ml-1">Protein (g)</label>
-                                <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.protein} onChange={e => setCustomFood({...customFood, protein: e.target.value})} />
+                                <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.protein} onChange={e => setCustomFood({...customFood, protein: e.target.value})} />
                             </div>
                             <div className="flex-1">
                                 <label className="text-xs text-stone-400 ml-1">Calories</label>
-                                <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.calories} onChange={e => setCustomFood({...customFood, calories: e.target.value})} />
+                                <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.calories} onChange={e => setCustomFood({...customFood, calories: e.target.value})} />
                             </div>
                         </div>
-                        <button onClick={handleSaveCustom} className="w-full mt-2 py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 active:scale-95">
+                        <button onClick={handleSaveCustom} className="w-full mt-2 py-4 bg-violet-500 text-white font-bold rounded-2xl shadow-lg hover:bg-violet-600 transition-colors flex items-center justify-center gap-2 active:scale-95">
                             <Save size={18}/> Save & Select
                         </button>
                     </div>
@@ -1412,7 +1412,7 @@ const FoodLogList = ({ items, onDelete, onEdit }) => {
                                                 )}
                                             </div>
                                             <div className="text-xs text-stone-500 mt-1 flex gap-2 flex-wrap">
-                                                {item.protein > 0 && <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-lg font-medium">{item.protein}g Pro</span>}
+                                                {item.protein > 0 && <span className="bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-lg font-medium">{item.protein}g Pro</span>}
                                                 {item.calories > 0 && <span className="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-lg font-medium">{item.calories} Cal</span>}
                                             </div>
                                         </div>
@@ -1452,9 +1452,9 @@ const EmptyState = ({ onAddClick, suggestions }) => {
                         <button
                             key={idx}
                             onClick={() => onAddClick(food)}
-                            className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-600 dark:text-stone-300 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors active:scale-95"
+                            className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-600 dark:text-stone-300 hover:border-violet-300 dark:hover:border-violet-700 transition-colors active:scale-95"
                         >
-                            {food.name.split(' (')[0]} <span className="text-emerald-600 dark:text-emerald-400">+{food.protein}g</span>
+                            {food.name.split(' (')[0]} <span className="text-violet-600 dark:text-violet-300">+{food.protein}g</span>
                         </button>
                     ))}
                 </div>
@@ -1528,16 +1528,16 @@ const WeeklyView = ({ userId }) => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-800">
-                <h3 className="text-emerald-800 dark:text-emerald-300 font-bold mb-2">Consistency {'>'} Compensation</h3>
-                <p className="text-emerald-700 dark:text-emerald-400 text-sm leading-relaxed">Your average matters more than any single day. You're building momentum, not chasing perfection.</p>
+            <div className="bg-violet-50 dark:bg-violet-900/20 p-6 rounded-3xl border border-violet-100 dark:border-violet-800">
+                <h3 className="text-teal-700 dark:text-teal-300 font-bold mb-2">Consistency {'>'} Compensation</h3>
+                <p className="text-violet-700 dark:text-violet-300 text-sm leading-relaxed">Your average matters more than any single day. You're building momentum, not chasing perfection.</p>
             </div>
             
             {weeklyInsight && (
-                <div className={`p-4 rounded-2xl border ${weeklyInsight.type === 'up' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800'}`}>
+                <div className={`p-4 rounded-2xl border ${weeklyInsight.type === 'up' ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800'}`}>
                     <div className="flex items-center gap-2">
-                        <TrendingUp size={18} className={weeklyInsight.type === 'up' ? 'text-emerald-600' : 'text-amber-600'} />
-                        <span className={`font-bold ${weeklyInsight.type === 'up' ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                        <TrendingUp size={18} className={weeklyInsight.type === 'up' ? 'text-violet-600' : 'text-amber-600'} />
+                        <span className={`font-bold ${weeklyInsight.type === 'up' ? 'text-violet-700 dark:text-violet-300' : 'text-amber-700 dark:text-amber-300'}`}>
                             {weeklyInsight.value}% {weeklyInsight.type === 'up' ? '↑' : '↓'}
                         </span>
                         <span className="text-stone-600 dark:text-stone-400 text-sm">{weeklyInsight.message}</span>
@@ -1569,7 +1569,7 @@ const WeeklyView = ({ userId }) => {
                         return (
                             <div key={day.date} className="flex-1 flex flex-col items-center gap-2 group">
                                 <div className="w-full relative h-full flex items-end bg-stone-50 dark:bg-stone-800 rounded-lg overflow-hidden">
-                                    <div className={`w-full rounded-t-lg transition-all ${isToday ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-stone-300 dark:bg-stone-700 group-hover:bg-stone-400'}`} style={{ height: `${heightPct}%` }}/>
+                                    <div className={`w-full rounded-t-lg transition-all ${isToday ? 'bg-violet-500 dark:bg-violet-500' : 'bg-stone-300 dark:bg-stone-700 group-hover:bg-stone-400'}`} style={{ height: `${heightPct}%` }}/>
                                 </div>
                                 <span className="text-[10px] text-stone-400 font-medium">{new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
                             </div>
@@ -1589,7 +1589,7 @@ const FastFoodGuide = ({ onLogFood }) => {
     
     const getBadgeStyle = (badge) => {
         switch(badge) {
-            case 'best': return 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400';
+            case 'best': return 'bg-teal-100 dark:bg-teal-900/40 text-violet-700 dark:text-violet-300';
             case 'solid': return 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400';
             case 'aware': return 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400';
             default: return 'bg-stone-100 text-stone-600';
@@ -1636,7 +1636,7 @@ const FastFoodGuide = ({ onLogFood }) => {
                                     loggedAt: Date.now()
                                 });
                             }}
-                            className="w-full bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm text-left hover:border-emerald-200 dark:hover:border-emerald-800 transition-all active:scale-[0.98]"
+                            className="w-full bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm text-left hover:border-violet-200 dark:hover:border-violet-800 transition-all active:scale-[0.98]"
                         >
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1">
@@ -1649,11 +1649,11 @@ const FastFoodGuide = ({ onLogFood }) => {
                                     <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{item.note}</p>
                                 </div>
                                 <div className="text-right shrink-0 ml-3">
-                                    <div className="font-bold text-emerald-600 dark:text-emerald-400">{item.protein}g</div>
+                                    <div className="font-bold text-violet-600 dark:text-violet-300">{item.protein}g</div>
                                     <div className="text-xs text-stone-400">{item.calories} cal</div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                            <div className="flex items-center gap-1 text-violet-600 dark:text-violet-300 text-xs font-medium">
                                 <Plus size={12} /> Tap to log
                             </div>
                         </button>
@@ -1793,11 +1793,11 @@ const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
                                         <div className="font-medium text-stone-700 dark:text-stone-200">{food.name}</div>
                                         <div className="text-[10px] text-stone-400 flex items-center gap-2">
                                             <span>≈ {food.portion}</span>
-                                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded">{efficiency}g pro/100cal</span>
+                                            <span className="bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded">{efficiency}g pro/100cal</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-bold text-emerald-700 dark:text-emerald-400">{food.protein}g</div>
+                                        <div className="font-bold text-violet-700 dark:text-violet-300">{food.protein}g</div>
                                         <div className="text-xs text-stone-400">{food.calories} cal</div>
                                     </div>
                                 </div>
@@ -2153,7 +2153,7 @@ const Steady = () => {
                                             label="Protein" 
                                             unit="g" 
                                             icon={Utensils} 
-                                            colorClass={{ bg: 'bg-emerald-50 dark:bg-emerald-900/30', text: 'text-emerald-800 dark:text-emerald-300', fill: 'bg-emerald-600 dark:bg-emerald-500' }} 
+                                            colorClass={{ bg: 'bg-violet-50 dark:bg-violet-900/30', text: 'text-teal-700 dark:text-teal-300', fill: 'bg-violet-500 dark:bg-violet-500' }} 
                                         />
                                     </div>
                                     <div className="col-span-1">
@@ -2226,15 +2226,15 @@ const Steady = () => {
                 {/* Bottom Navigation - Fixed */}
                 <nav className="flex-none bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     <div className="flex justify-between items-center w-full max-w-xs mx-auto">
-                        <button onClick={() => setView('dashboard')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors active:scale-90 ${view === 'dashboard' ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-400'}`}>
+                        <button onClick={() => setView('dashboard')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors active:scale-90 ${view === 'dashboard' ? 'text-violet-700 dark:text-violet-300' : 'text-stone-400'}`}>
                             <LayoutDashboard size={24} />
                             <span className="text-[10px] font-bold">Daily</span>
                         </button>
-                        <button onClick={() => setView('weekly')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors active:scale-90 ${view === 'weekly' ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-400'}`}>
+                        <button onClick={() => setView('weekly')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors active:scale-90 ${view === 'weekly' ? 'text-violet-700 dark:text-violet-300' : 'text-stone-400'}`}>
                             <BarChart3 size={24} />
                             <span className="text-[10px] font-bold">Weekly</span>
                         </button>
-                        <button onClick={() => setView('learn')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors active:scale-90 ${view === 'learn' ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-400'}`}>
+                        <button onClick={() => setView('learn')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors active:scale-90 ${view === 'learn' ? 'text-violet-700 dark:text-violet-300' : 'text-stone-400'}`}>
                             <BookOpen size={24} />
                             <span className="text-[10px] font-bold">Learn</span>
                         </button>

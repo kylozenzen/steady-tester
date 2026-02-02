@@ -6,16 +6,21 @@
     <title>Steady</title>
 
     <!-- PWA + theme colors -->
-    <meta name="theme-color" content="#FDFBF7" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#EAF4FF" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Steady">
 
     <link rel="icon" href="favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" href="icons/steady-favicon-32.png">
-    <link rel="apple-touch-icon" href="icons/steady-192.png">
+    <link rel="icon" href="icons/steady-icon-32.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/steady-icon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="icons/steady-icon-64.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/steady-icon-96.png">
+    <link rel="icon" type="image/png" sizes="128x128" href="icons/steady-icon-128.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/steady-icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/steady-icon-192.png">
     <link rel="manifest" href="manifest.webmanifest">
 
     <!-- Google tag (gtag.js) -->
@@ -66,15 +71,17 @@
 
 </head>
 <body class="bg-[#FDFBF7] dark:bg-stone-950 transition-colors duration-300">
-    <div id="root">
-        <!-- Initial loading shell while React + JS load, also shows when offline -->
-        <div class="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-stone-950 gap-4">
-            <div class="w-40 h-4 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
-                <div class="h-full w-3/4 bg-emerald-600 rounded-full animate-pulse"></div>
+    <div class="steady-app-shell">
+        <div id="root">
+            <!-- Initial loading shell while React + JS load, also shows when offline -->
+            <div class="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-stone-950 gap-4">
+                <div class="w-40 h-4 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                    <div class="h-full w-3/4 bg-violet-500 rounded-full animate-pulse"></div>
+                </div>
+                <p class="text-stone-700 dark:text-stone-300 text-sm tracking-wide">
+                    Balancing your day…
+                </p>
             </div>
-            <p class="text-stone-700 dark:text-stone-300 text-sm tracking-wide">
-                Balancing your day…
-            </p>
         </div>
     </div>
 

@@ -9,6 +9,43 @@ html, body, #root {
     padding: 0;
 }
 
+:root {
+    --steady-bg-start: #E5F3FF;   /* soft blue */
+    --steady-bg-mid: #F3E5FF;   /* soft lavender */
+    --steady-bg-end: #DDF9FF;   /* aqua */
+    --steady-primary: #A855F7;   /* violet brand */
+    --steady-primary-soft: #C4B5FD; /* lighter violet */
+    --steady-accent: #14B8A6;   /* teal accent */
+    --steady-surface: #F9FAFB;   /* card surface */
+    --steady-border: #E5E7EB;   /* light border */
+}
+
+.steady-app-shell {
+    background: radial-gradient(circle at top left, var(--steady-bg-start) 0, transparent 55%),
+                radial-gradient(circle at top right, var(--steady-bg-mid) 0, transparent 55%),
+                radial-gradient(circle at bottom, var(--steady-bg-end) 0, transparent 55%),
+                #FDFBF7;
+    min-height: 100vh;
+}
+
+.steady-card {
+    background-color: var(--steady-surface);
+    border: 1px solid var(--steady-border);
+}
+
+.steady-primary-btn {
+    background: linear-gradient(135deg, var(--steady-primary), var(--steady-accent));
+    color: #FFFFFF;
+}
+
+.steady-primary-btn:hover {
+    filter: brightness(1.05);
+}
+
+.steady-primary-btn:active {
+    transform: scale(0.97);
+}
+
 /* iOS safe areas */
 body {
     padding-top: env(safe-area-inset-top);
@@ -75,8 +112,8 @@ input, select, textarea {
 .animate-slide-in-up { animation: slideInUp 0.3s ease-out; }
 
 @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(168, 85, 247, 0); }
 }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
