@@ -62,7 +62,8 @@
       }
     }
     </script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.9/babel.min.js"></script>
+
 </head>
 <body class="bg-[#FDFBF7] dark:bg-stone-950 transition-colors duration-300">
     <div id="root">
@@ -77,13 +78,35 @@
         </div>
     </div>
 
-    <!-- Use Babel only for JSX; let the browser handle ES modules via the import map -->
-    <script
-        type="text/babel"
-        data-type="module"
-        data-presets="react"
-        src="script.js">
-    </script>
+    <!-- Bootstrapping Steady: compile JSX with Babel, then run as an ES module -->
+<script type="module">
+  (async () => {
+    try {
+      // 1. Load the original source (with JSX + imports)
+      const response = await fetch('script.js');
+      if (!response.ok) {
+        throw new Error(`Failed to load script.js: ${response.status}`);
+      }
+      const source = await response.text();
+
+      // 2. Use Babel to compile ONLY JSX, keep ES modules intact
+      const { code } = Babel.transform(source, {
+        presets: ['react'],
+        sourceType: 'module',
+        filename: 'script.js',
+      });
+
+      // 3. Turn the compiled code into a blob URL and import it as a module
+      const blob = new Blob([code], { type: 'text/javascript' });
+      const moduleUrl = URL.createObjectURL(blob);
+
+      await import(moduleUrl);
+    } catch (error) {
+      console.error('Steady boot error:', error);
+    }
+  })();
+</script>
+
 
 </body>
 </html>
