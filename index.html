@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Steady</title>
+
+    <!-- PWA + theme colors -->
+    <meta name="theme-color" content="#FDFBF7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Steady">
+
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="icons/steady-favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/steady-192.png">
+    <link rel="manifest" href="manifest.webmanifest">
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XER9SVKX9B"></script>
     <script>
@@ -14,13 +28,7 @@
       gtag('config', 'G-XER9SVKX9B');
     </script>
 
-    <meta name="theme-color" content="#FDFBF7" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Steady">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
-
+    <!-- App styles -->
     <link rel="stylesheet" href="style.css">
 
 
@@ -57,9 +65,25 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-[#FDFBF7] dark:bg-stone-950 transition-colors duration-300">
-    <div id="root"></div>
+    <div id="root">
+        <!-- Initial loading shell while React + JS load, also shows when offline -->
+        <div class="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-stone-950 gap-4">
+            <div class="w-40 h-4 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                <div class="h-full w-3/4 bg-emerald-600 rounded-full animate-pulse"></div>
+            </div>
+            <p class="text-stone-700 dark:text-stone-300 text-sm tracking-wide">
+                Balancing your day…
+            </p>
+        </div>
+    </div>
 
-    <script type="text/babel" data-type="module" src="script.js"></script>
+    <!-- Use Babel only for JSX; let the browser handle ES modules via the import map -->
+    <script
+        type="text/babel"
+        data-type="module"
+        data-presets="react"
+        src="script.js">
+    </script>
 
 </body>
 </html>

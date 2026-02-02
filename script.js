@@ -26,6 +26,20 @@ function trackEvent(name, params = {}) {
     }
 }
 
+// --- SERVICE WORKER REGISTRATION ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register('/sw.js')
+            .catch((err) => {
+                // Non-fatal; app should still work fine
+                console.error('Service worker registration failed:', err);
+            });
+    });
+}
+
+// Utils
+
 function safeNum(n) {
     const x = Number(n);
     return Number.isFinite(x) ? x : undefined;
