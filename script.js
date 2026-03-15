@@ -2363,7 +2363,7 @@ const InstallPrompt = ({ onDismiss }) => {
         ? [{ icon: '↑', text: 'Tap the Share button in Safari' }, { icon: '⊞', text: 'Tap "Add to Home Screen"' }, { icon: '✓',  text: 'Tap "Add" — done!' }]
         : isAndroid
         ? [{ icon: '⋮', text: 'Tap the menu in Chrome (top right)' }, { icon: '⊞', text: 'Tap "Add to Home Screen"' }, { icon: '✓',  text: 'Tap "Add" — done!' }]
-        : [{ icon: '⊞', text: 'Use your browser's "Install" or "Add to Home Screen" option' }];
+        : [{ icon: '⊞', text: "Use your browser's 'Install' or 'Add to Home Screen' option" }];
 
     return (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-end justify-center p-4 z-[70] animate-fade-in">
