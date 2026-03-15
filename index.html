@@ -1,74 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Planet Strength</title>
-  <meta name="application-name" content="Planet Strength" />
-  <meta name="apple-mobile-web-app-title" content="Planet Strength" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="Planet Strength is a calm, simple tracker for Today's Workout." />
-  <meta name="theme-color" content="#facc15" />
-  <meta name="color-scheme" content="dark" />
-  <link id="manifest-placeholder" rel="manifest" href="manifest.json" />
-  <link id="app-icon" rel="icon" href="icons/icon-192.svg" />
-  <link id="apple-touch-icon" rel="apple-touch-icon" href="" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@1,600;1,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
-  <script>tailwind = { disableWarning: true }</script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Nobody Studios Theme — must come AFTER Tailwind to override -->
-  <link rel="stylesheet" href="nobody-theme.css" />
-  <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body class="app-shell">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Steady</title>
 
-  <!-- Loading screen — hidden once React mounts -->
-  <div id="ps-loading">
-    <div id="ps-loading-img"></div>
-    <div id="ps-loading-content">
-      <div id="ps-loading-brand">PLANET STRENGTH</div>
-      <div id="ps-loading-sub">Built by Nobody.</div>
-    </div>
-  </div>
+    <!-- PWA + theme colors -->
+    <meta name="theme-color" content="#EAF4FF" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Steady">
 
-  <div id="root"></div>
-  <div id="install-prompt" aria-live="polite"></div>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" href="icons/steady-icon-32.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/steady-icon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="icons/steady-icon-64.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/steady-icon-96.png">
+    <link rel="icon" type="image/png" sizes="128x128" href="icons/steady-icon-128.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/steady-icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/steady-icon-192.png">
+    <link rel="manifest" href="manifest.webmanifest">
 
-  <!-- Data files (plain JS, no JSX needed) -->
-  <script src="data/constants.js"></script>
-  <script src="data/copy.js"></script>
-  <script src="data/equipment.js"></script>
-  <script src="data/workoutPlans.js"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XER9SVKX9B"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
 
-  <!-- Custom hooks (plain JS, uses global React) -->
-  <script src="hooks/storage.js"></script>
-  <script src="hooks/useDebounce.js"></script>
-  <script src="hooks/usePersistedState.js"></script>
-  <script src="hooks/useToast.js"></script>
-  <script src="hooks/useModal.js"></script>
+      gtag('config', 'G-XER9SVKX9B');
+    </script>
 
-  <!-- Contexts (JSX, needs Babel) -->
-  <script type="text/babel" src="hooks/SettingsContext.jsx"></script>
+    <!-- App styles -->
+    <link rel="stylesheet" href="style.css">
 
-  <!-- Components (JSX, needs Babel) -->
-  <script type="text/babel" src="components/Icon.jsx"></script>
 
-  <!-- App logic -->
-  <script type="text/babel" data-presets="env,react" src="script.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        stone: {
+                            50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1',
+                            400: '#a8a29e', 500: '#78716c', 600: '#57534e', 700: '#44403c',
+                            800: '#292524', 900: '#1c1917', 950: '#0c0a09',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 
-  <!-- Service Worker registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
-      });
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.294.0"
+      }
     }
-  </script>
+    </script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.9/babel.min.js"></script>
+
+</head>
+<body class="bg-[#FDFBF7] dark:bg-stone-950 transition-colors duration-300">
+    <div class="steady-app-shell">
+        <div id="root">
+            <!-- Initial loading shell while React + JS load, also shows when offline -->
+            <div class="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-stone-950 gap-4">
+                <div class="w-40 h-4 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                    <div class="h-full w-3/4 bg-violet-500 rounded-full animate-pulse"></div>
+                </div>
+                <p class="text-stone-700 dark:text-stone-300 text-sm tracking-wide">
+                    Balancing your day…
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrapping Steady: compile JSX with Babel, then run as an ES module -->
+<script type="module">
+  (async () => {
+    try {
+      // 1. Load the original source (with JSX + imports)
+      const response = await fetch('script.js');
+      if (!response.ok) {
+        throw new Error(`Failed to load script.js: ${response.status}`);
+      }
+      const source = await response.text();
+
+      // 2. Use Babel to compile ONLY JSX, keep ES modules intact
+      const { code } = Babel.transform(source, {
+        presets: ['react'],
+        sourceType: 'module',
+        filename: 'script.js',
+      });
+
+      // 3. Turn the compiled code into a blob URL and import it as a module
+      const blob = new Blob([code], { type: 'text/javascript' });
+      const moduleUrl = URL.createObjectURL(blob);
+
+      await import(moduleUrl);
+    } catch (error) {
+      console.error('Steady boot error:', error);
+    }
+  })();
+</script>
+
+
 </body>
 </html>
