@@ -1301,7 +1301,7 @@ const Onboarding = ({ onComplete }) => {
                                 <NumPad
                                     value={form.heightFt}
                                     onChange={v => set({ heightFt: v })}
-                                    onNext={() => {}} // inches field handles next
+                                    onNext={() => {}}
                                     nextDisabled={true}
                                     hint="ft"
                                 />
