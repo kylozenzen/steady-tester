@@ -1900,8 +1900,8 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
                                                 })}
                                             </div>
                                         </div>
-                                        </div>{/* end swipe inner */}
-                                    </div>{/* end swipe outer */}
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
