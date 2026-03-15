@@ -2399,10 +2399,88 @@ const Steady = () => {
 
                 {/* Main Content - Scrollable */}
                 <main className="flex-1 overflow-y-auto smooth-scroll scrollbar-hide">
-                    <div className="p-4 pb-6 space-y-6">
+                    <div className="p-4 pb-6 space-y-4">
                         {view === 'dashboard' && (
-                            <div className="space-y-6 animate-slide-up">
-                                {/* Insight Card */}
+                            <div className="space-y-4 animate-slide-up">
+
+                                {/* ── TIER 1: The day at a glance ─────────────────────
+                                     Three stats side-by-side at the top — the numbers are 
+                                     the hero. Big, readable, instant context on open.
+                                ─────────────────────────────────────────────────────── */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    {/* Protein */}
+                                    <div className={`bg-white dark:bg-stone-900 p-4 rounded-2xl border transition-all duration-500 ${totals.protein >= targets.protein ? 'border-violet-200 dark:border-violet-700' : 'border-stone-100 dark:border-stone-800'}`}>
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                            <Utensils size={13} className="text-teal-600 dark:text-teal-400" />
+                                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Protein</span>
+                                        </div>
+                                        <div className="mb-2">
+                                            <span className={`text-2xl font-extrabold ${totals.protein >= targets.protein ? 'text-violet-600 dark:text-violet-300' : 'text-stone-800 dark:text-stone-100'}`}>{totals.protein}</span>
+                                            <span className="text-xs text-stone-400 ml-1">/ {targets.protein}g</span>
+                                        </div>
+                                        <div className="h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                                            <div className={`h-full rounded-full transition-all duration-1000 ease-out ${totals.protein >= targets.protein ? 'bg-violet-500' : 'bg-violet-400'}`}
+                                                 style={{ width: `${Math.min(100,(totals.protein/targets.protein)*100)}%` }}/>
+                                        </div>
+                                        {totals.protein >= targets.protein && (
+                                            <div className="flex items-center gap-1 mt-1.5">
+                                                <Check size={10} className="text-violet-500"/>
+                                                <span className="text-[9px] font-bold text-violet-500">Hit!</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Calories */}
+                                    <div className={`bg-white dark:bg-stone-900 p-4 rounded-2xl border transition-all duration-500 ${caloriesOver > 0 ? 'border-red-200 dark:border-red-800' : 'border-stone-100 dark:border-stone-800'}`}>
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                            <Flame size={13} className={caloriesOver > 0 ? 'text-red-500' : 'text-orange-500'} />
+                                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Calories</span>
+                                        </div>
+                                        <div className="mb-2">
+                                            <span className={`text-2xl font-extrabold ${caloriesOver > 0 ? 'text-red-500 dark:text-red-400' : 'text-stone-800 dark:text-stone-100'}`}>{totals.calories}</span>
+                                            <span className="text-xs text-stone-400 ml-1">/ {targets.calories}</span>
+                                        </div>
+                                        <div className="h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                                            <div className={`h-full rounded-full transition-all duration-1000 ease-out ${caloriesOver > 0 ? 'bg-red-400' : 'bg-orange-400'}`}
+                                                 style={{ width: `${Math.min(100,(totals.calories/targets.calories)*100)}%` }}/>
+                                        </div>
+                                        {caloriesOver > 0 && (
+                                            <span className="text-[9px] font-bold text-red-500 mt-1 block">+{caloriesOver} over</span>
+                                        )}
+                                    </div>
+
+                                    {/* Water — compact, tap to expand buttons */}
+                                    <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 transition-all duration-500">
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                            <Droplet size={13} className="text-cyan-500" />
+                                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Water</span>
+                                        </div>
+                                        <div className="mb-2">
+                                            <span className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">{logs.water || 0}</span>
+                                            <span className="text-xs text-stone-400 ml-1">oz</span>
+                                        </div>
+                                        <div className="h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                                            <div className="h-full rounded-full transition-all duration-1000 ease-out bg-cyan-400"
+                                                 style={{ width: `${Math.min(100,((logs.water||0)/targets.water)*100)}%` }}/>
+                                        </div>
+                                        <span className="text-[9px] text-stone-400 mt-1 block">of {targets.water}oz</span>
+                                    </div>
+                                </div>
+
+                                {/* Water quick-add — compact single row, lives right under the stats */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-stone-400 shrink-0 pl-1">Water</span>
+                                    <div className="flex-1 flex gap-2">
+                                        <button onClick={() => handleWater(8)}  className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl text-xs active:scale-95 transition-transform">+8oz</button>
+                                        <button onClick={() => handleWater(16)} className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl text-xs active:scale-95 transition-transform">+16oz</button>
+                                        <button onClick={() => handleWater(32)} className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl text-xs active:scale-95 transition-transform">+32oz</button>
+                                        <button onClick={() => handleWater(-8)} className="w-9 py-2 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-xs flex items-center justify-center active:scale-95 transition-transform shrink-0">
+                                            <Minus size={14}/>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* ── Insight card — only shows when relevant ── */}
                                 {selectedDate === getTodayStr() && (
                                     <InsightCard 
                                         proteinRemaining={proteinRemaining} 
@@ -2411,8 +2489,15 @@ const Steady = () => {
                                         proteinTarget={targets.protein}
                                     />
                                 )}
-                                
-                                {/* Quick Log Section */}
+
+                                {/* ── TIER 2: Actions ─────────────────────────────────
+                                     Log Meal is the primary CTA — full width, prominent.
+                                     Quick Add lives directly beneath as a secondary action.
+                                ─────────────────────────────────────────────────────── */}
+                                <button onClick={() => { haptic.medium(); setEditingItem(null); setShowAddModal(true); }} className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-2xl shadow-lg shadow-stone-200/60 dark:shadow-none hover:bg-stone-700 dark:hover:bg-stone-600 transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
+                                    <Plus size={20} /> Log Meal
+                                </button>
+
                                 {selectedDate === getTodayStr() && (
                                     <QuickLogSection 
                                         recentFoods={recentFoods}
@@ -2421,62 +2506,10 @@ const Steady = () => {
                                         onCopyYesterday={handleCopyYesterday}
                                     />
                                 )}
-                                
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-1">
-                                        <ProgressBar 
-                                            current={totals.protein} 
-                                            target={targets.protein} 
-                                            label="Protein" 
-                                            unit="g" 
-                                            icon={Utensils} 
-                                            colorClass={{ bg: 'bg-violet-50 dark:bg-violet-900/30', text: 'text-teal-700 dark:text-teal-300', fill: 'bg-violet-500 dark:bg-violet-500' }} 
-                                        />
-                                    </div>
-                                    <div className="col-span-1">
-                                        <ProgressBar 
-                                            current={totals.calories} 
-                                            target={targets.calories} 
-                                            label="Calories" 
-                                            unit="" 
-                                            icon={Flame} 
-                                            colorClass={{ bg: 'bg-orange-50 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300', fill: 'bg-orange-500' }} 
-                                            isOverBudget={caloriesOver > 0}
-                                        />
-                                    </div>
-                                    <div className="col-span-2 bg-white dark:bg-stone-900 p-5 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-2 rounded-full bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300">
-                                                    <Droplet size={18} />
-                                                </div>
-                                                <span className="font-medium text-stone-600 dark:text-stone-300">Water</span>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-xl font-bold text-stone-800 dark:text-stone-100">{logs.water || 0}</span>
-                                                <span className="text-sm text-stone-400"> / {targets.water}oz</span>
-                                            </div>
-                                        </div>
-                                        <div className="h-3 bg-stone-100 dark:bg-stone-800 rounded-full w-full overflow-hidden mb-4">
-                                            <div className="h-full rounded-full transition-all duration-1000 ease-out bg-cyan-500" style={{ width: `${Math.min(100, ((logs.water || 0) / targets.water) * 100)}%` }}/>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <button onClick={() => handleWater(-8)} className="w-11 h-11 bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors flex items-center justify-center active:scale-90 shrink-0">
-                                                <Minus size={18}/>
-                                            </button>
-                                            <div className="flex-1 flex gap-2">
-                                                <button onClick={() => handleWater(8)} className="flex-1 py-2.5 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95 text-sm">+8oz</button>
-                                                <button onClick={() => handleWater(16)} className="flex-1 py-2.5 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95 text-sm">+16oz</button>
-                                                <button onClick={() => handleWater(32)} className="flex-1 py-2.5 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95 text-sm">+32oz</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button onClick={() => { haptic.medium(); setEditingItem(null); setShowAddModal(true); }} className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-2xl shadow-xl shadow-stone-200 dark:shadow-none hover:bg-stone-700 dark:hover:bg-stone-600 transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
-                                    <Plus size={20} /> Log Meal
-                                </button>
-                                
-                                {/* Food Log or Empty State */}
+
+                                {/* ── TIER 3: The journal ──────────────────────────────
+                                     Everything else scrolls below — the detail layer.
+                                ─────────────────────────────────────────────────────── */}
                                 {logs.items && logs.items.length > 0 ? (
                                     <FoodLogList items={logs.items} onDelete={handleDelete} onEdit={handleEditClick} onMultiply={handleMultiply} />
                                 ) : (
