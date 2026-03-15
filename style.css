@@ -131,3 +131,15 @@ input, select, textarea {
     100% { transform: translateY(-20px) rotate(180deg); opacity: 0; }
 }
 .animate-confetti { animation: confetti 0.8s ease-out forwards; }
+
+@keyframes slideFromRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-from-right { animation: slideFromRight 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
+@keyframes slideFromLeft {
+    from { opacity: 0; transform: translateX(-40px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-from-left { animation: slideFromLeft 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }

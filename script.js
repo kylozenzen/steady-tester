@@ -1098,25 +1098,69 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
 // One focused question per step — reduces mobile drop-off.
 // Steps: 0=Welcome  1=Weight  2=Height  3=Age+Sex  4=Goal  5=Activity  6=Training  7=Blueprint
 
-const OnboardProgress = ({ step }) => {
-    if (step === 0) return null;
-    const total = 7; // steps 1-7
-    const filled = step - 1;
+// ── ONBOARDING — single container, slides between steps, custom numpad ───────
+// No system keyboard on numeric steps = zero layout jump.
+// All steps live in one mounted div; content slides with CSS transform.
+
+const ONBOARD_TOTAL = 7; // steps 1-7 (0 = welcome splash)
+
+// Custom numeric keypad — shown instead of system keyboard on number steps
+const NumPad = ({ value, onChange, onNext, nextDisabled, hint }) => {
+    const tap = (k) => {
+        haptic.light();
+        if (k === '⌫') {
+            onChange(value.slice(0, -1));
+        } else if (k === '→') {
+            if (!nextDisabled) onNext();
+        } else {
+            // Max 4 digits (999.9 lbs / inches / years is plenty)
+            if (value.length < 4) onChange(value + k);
+        }
+    };
+
+    const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','→'];
+    const displayVal = value || '';
+
     return (
-        <div className="flex gap-1.5 mb-4">
-            {Array.from({ length: total }).map((_, i) => (
-                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                    i < filled  ? 'bg-violet-500' :
-                    i === filled ? 'bg-violet-300' :
-                    'bg-stone-200 dark:bg-stone-700'
-                }`} />
-            ))}
+        <div className="flex flex-col items-center w-full">
+            {/* Big display */}
+            <div className="w-full bg-stone-50 dark:bg-stone-800 rounded-2xl px-6 py-5 flex items-center justify-between mb-2">
+                <span className={`text-5xl font-extrabold tracking-tight transition-all ${displayVal ? 'text-stone-800 dark:text-stone-100' : 'text-stone-300 dark:text-stone-600'}`}>
+                    {displayVal || '—'}
+                </span>
+                {hint && <span className="text-sm text-stone-400 font-medium">{hint}</span>}
+            </div>
+            {/* Keypad grid */}
+            <div className="grid grid-cols-3 gap-2 w-full mt-1">
+                {keys.map(k => {
+                    const isNext    = k === '→';
+                    const isBack    = k === '⌫';
+                    const nextReady = isNext && !nextDisabled;
+                    return (
+                        <button
+                            key={k}
+                            onClick={() => tap(k)}
+                            disabled={isNext && nextDisabled}
+                            className={`py-4 rounded-2xl text-xl font-bold transition-all active:scale-[0.93] select-none
+                                ${isNext && nextDisabled ? 'bg-stone-100 dark:bg-stone-800 text-stone-300 dark:text-stone-600 cursor-not-allowed' :
+                                  nextReady              ? 'bg-stone-800 dark:bg-stone-700 text-white shadow-lg active:bg-stone-700' :
+                                  isBack                 ? 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300' :
+                                                           'bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 text-stone-800 dark:text-stone-100 shadow-sm'
+                                }`}
+                        >
+                            {isNext ? (nextDisabled ? '→' : '→') : k}
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
 };
 
 const Onboarding = ({ onComplete }) => {
     const [step, setStep] = useState(0);
+    const [dir,  setDir]  = useState(1);   // 1 = forward, -1 = backward
+    const [animKey, setAnimKey] = useState(0); // triggers re-animation
     const [form, setForm] = useState({
         currentWeight: '', goalWeight: '', age: '',
         heightFt: '', heightIn: '', sex: 'female',
@@ -1125,11 +1169,16 @@ const Onboarding = ({ onComplete }) => {
     });
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-    const next = () => { haptic.medium(); setStep(s => s + 1); };
-    const back = () => { haptic.light();  setStep(s => s - 1); };
+    const go = (delta) => {
+        haptic[delta > 0 ? 'medium' : 'light']();
+        setDir(delta);
+        setAnimKey(k => k + 1);
+        setStep(s => s + delta);
+    };
+    const next = () => go(1);
+    const back = () => go(-1);
     const set  = (patch) => setForm(f => ({ ...f, ...patch }));
 
-    // Live-calculate targets whenever form changes
     const calc = useMemo(() => {
         const w  = safeInt(form.currentWeight);
         const hi = (safeInt(form.heightFt) * 12) + safeInt(form.heightIn);
@@ -1144,39 +1193,52 @@ const Onboarding = ({ onComplete }) => {
     const healthyRange = useMemo(() => suggestHealthyRange(form.heightFt, form.heightIn), [form.heightFt, form.heightIn]);
     const suggestion   = useMemo(() => suggestTargetWeight(safeInt(form.currentWeight), form.heightFt, form.heightIn), [form.currentWeight, form.heightFt, form.heightIn]);
 
-    // Shared input style
-    const inp = "w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none";
+    // Slide animation class based on direction
+    const slideClass = dir > 0 ? 'animate-slide-from-right' : 'animate-slide-from-left';
 
-    // Shared step shell — progress bar + back button + centered content
-    const Shell = ({ children, noPad }) => (
-        <div className={`w-full h-full flex flex-col animate-fade-in overflow-y-auto ${noPad ? '' : 'p-6'}`}>
-            {!noPad && <OnboardProgress step={step} />}
-            {step > 0 && (
-                <button onClick={back} className={`flex items-center gap-1 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 text-sm self-start active:scale-95 transition-transform ${noPad ? 'mt-6 mx-6' : '-mt-1 mb-4'}`}>
-                    <ChevronLeft size={15} /> Back
-                </button>
-            )}
-            <div className={`flex-1 flex flex-col justify-center ${noPad ? 'px-6 pb-8' : 'space-y-6'}`}>
-                {children}
-            </div>
+    // Progress dots (steps 1-7)
+    const ProgressDots = () => step === 0 ? null : (
+        <div className="flex gap-1.5 px-6 pt-5 pb-2 flex-shrink-0">
+            {Array.from({ length: ONBOARD_TOTAL }).map((_, i) => (
+                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-400 ${
+                    i < step - 1  ? 'bg-violet-500' :
+                    i === step - 1 ? 'bg-violet-400' :
+                    'bg-stone-200 dark:bg-stone-700'
+                }`} />
+            ))}
         </div>
     );
 
-    // Shared CTA button
-    const Cta = ({ label = 'Continue', onClick, disabled, last }) => (
-        <button onClick={onClick} disabled={disabled}
-            className={`w-full py-4 font-bold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg mt-2 ${
-                last
-                ? 'bg-violet-600 text-white shadow-violet-200 dark:shadow-none hover:bg-violet-700'
-                : 'bg-stone-800 dark:bg-stone-700 text-stone-50 shadow-stone-200 dark:shadow-none hover:bg-stone-700'
-            }`}>
-            {label}{!last && <ArrowRight size={18} />}
-        </button>
+    // Shared footer with Back + Next buttons
+    const Footer = ({ onNext, nextDisabled, nextLabel = 'Continue', last, skipLabel, onSkip }) => (
+        <div className="px-6 pb-8 pt-3 flex-shrink-0 space-y-2">
+            <div className="flex gap-3">
+                {step > 0 && (
+                    <button onClick={back}
+                        className="w-12 h-14 flex items-center justify-center bg-stone-100 dark:bg-stone-800 rounded-2xl text-stone-500 active:scale-95 transition-transform flex-shrink-0">
+                        <ChevronLeft size={22} />
+                    </button>
+                )}
+                <button onClick={onNext} disabled={nextDisabled}
+                    className={`flex-1 h-14 font-bold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg ${
+                        last
+                        ? 'bg-violet-600 text-white shadow-violet-200 dark:shadow-none'
+                        : 'bg-stone-800 dark:bg-stone-700 text-white shadow-stone-200 dark:shadow-none'
+                    }`}>
+                    {nextLabel} {!last && <ArrowRight size={18} />}
+                </button>
+            </div>
+            {skipLabel && (
+                <button onClick={onSkip} className="w-full text-center text-stone-400 text-sm py-1 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">
+                    {skipLabel}
+                </button>
+            )}
+        </div>
     );
 
-    // ── Step 0: Welcome ──────────────────────────────────────────────────────
+    // ── Step 0: Welcome splash ───────────────────────────────────────────────
     if (step === 0) return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 text-center animate-fade-in">
+        <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-violet-600 to-teal-500 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-violet-200 dark:shadow-none">
                 <Leaf size={36} className="text-white" />
             </div>
@@ -1184,9 +1246,9 @@ const Onboarding = ({ onComplete }) => {
             <h1 className="text-4xl font-extrabold text-stone-800 dark:text-stone-100 mt-1 mb-8">Steady</h1>
             <div className="w-full text-left space-y-4 text-sm mb-10 bg-stone-50 dark:bg-stone-800 p-6 rounded-2xl border border-stone-100 dark:border-stone-700">
                 {[
-                    { n: 1, color: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300',    bold: 'Evidence-based.',     desc: 'Scientific formulas, real safety guardrails.' },
-                    { n: 2, color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', bold: 'No database needed.', desc: 'Log what you know. Learn what you eat.' },
-                    { n: 3, color: 'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300',    bold: "You're in control.",  desc: 'Starting points, not a contract.' },
+                    { n:1, color:'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300',    bold:'Evidence-based.',     desc:'Scientific formulas, real safety guardrails.' },
+                    { n:2, color:'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', bold:'No database needed.', desc:'Log what you know. Learn what you eat.' },
+                    { n:3, color:'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300',    bold:"You're in control.",  desc:'Starting points, not a contract.' },
                 ].map(({ n, color, bold, desc }) => (
                     <div key={n} className="flex gap-3">
                         <div className={`mt-0.5 ${color} w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0`}>{n}</div>
@@ -1194,246 +1256,270 @@ const Onboarding = ({ onComplete }) => {
                     </div>
                 ))}
             </div>
-            <button onClick={next} className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 rounded-2xl font-bold hover:bg-stone-700 transition-colors shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
+            <button onClick={next} className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
                 Build My Plan <ArrowRight size={18} />
             </button>
         </div>
     );
 
-    // ── Step 1: Current weight ───────────────────────────────────────────────
-    if (step === 1) return (
-        <Shell>
-            <div>
-                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">What do you weigh?</h2>
-                <p className="text-sm text-stone-400">Just your starting point — no judgment here.</p>
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Current Weight (lbs)</label>
-                <input type="number" inputMode="numeric" autoFocus placeholder="e.g. 185"
-                    value={form.currentWeight} onChange={e => set({ currentWeight: e.target.value })}
-                    className={inp} />
-            </div>
-            <Cta onClick={next} disabled={safeInt(form.currentWeight) <= 0} />
-        </Shell>
-    );
+    // Steps 1-7 share one mounted container — no remounting, no keyboard jump
+    return (
+        <div className="w-full h-full flex flex-col bg-white dark:bg-stone-900 overflow-hidden">
+            <ProgressDots />
 
-    // ── Step 2: Height ───────────────────────────────────────────────────────
-    if (step === 2) return (
-        <Shell>
-            <div>
-                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">How tall are you?</h2>
-                <p className="text-sm text-stone-400">Used to calculate your calorie and protein targets.</p>
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Height</label>
-                <div className="flex gap-3">
-                    <div className="flex-1 relative">
-                        <input type="number" inputMode="numeric" autoFocus placeholder="5"
-                            value={form.heightFt} onChange={e => set({ heightFt: e.target.value })}
-                            className={inp} />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm">ft</span>
-                    </div>
-                    <div className="flex-1 relative">
-                        <input type="number" inputMode="numeric" placeholder="9"
-                            value={form.heightIn} onChange={e => set({ heightIn: e.target.value })}
-                            className={inp} />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm">in</span>
-                    </div>
-                </div>
-                {healthyRange && (
-                    <div className="mt-3 p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex gap-2 items-start animate-fade-in">
-                        <Info size={14} className="text-violet-500 shrink-0 mt-0.5" />
-                        <p className="text-xs text-violet-700 dark:text-violet-300">
-                            Healthy range for your height: <strong>{healthyRange.min}–{healthyRange.max} lbs</strong>
-                        </p>
+            {/* Sliding content area */}
+            <div key={animKey} className={`flex-1 overflow-y-auto overflow-x-hidden ${slideClass}`}>
+
+                {/* ── Step 1: Current weight ── */}
+                {step === 1 && (
+                    <div className="px-6 pt-4 pb-2 space-y-6">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">What do you weigh?</h2>
+                            <p className="text-sm text-stone-400">Just your starting point — no judgment here.</p>
+                        </div>
+                        <NumPad
+                            value={form.currentWeight}
+                            onChange={v => set({ currentWeight: v })}
+                            onNext={next}
+                            nextDisabled={safeInt(form.currentWeight) <= 0}
+                            hint="lbs"
+                        />
                     </div>
                 )}
-            </div>
-            <Cta onClick={next} disabled={safeInt(form.heightFt) <= 0} />
-        </Shell>
-    );
 
-    // ── Step 3: Age & Sex ────────────────────────────────────────────────────
-    if (step === 3) return (
-        <Shell>
-            <div>
-                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Age & biological sex</h2>
-                <p className="text-sm text-stone-400">Needed for the BMR formula — used only for math.</p>
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Your Age</label>
-                <input type="number" inputMode="numeric" autoFocus placeholder="e.g. 34"
-                    value={form.age} onChange={e => set({ age: e.target.value })}
-                    className={inp} />
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Biological Sex</label>
-                <div className="flex gap-3">
-                    {['female', 'male'].map(s => (
-                        <button key={s} onClick={() => set({ sex: s })}
-                            className={`flex-1 py-4 rounded-2xl font-bold text-sm border-2 transition-all active:scale-95 ${
-                                form.sex === s
-                                ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-                                : 'border-stone-100 dark:border-stone-700 text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-800'
-                            }`}>
-                            {s === 'female' ? 'Female' : 'Male'}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <Cta onClick={next} disabled={safeInt(form.age) <= 0} />
-        </Shell>
-    );
-
-    // ── Step 4: Goal weight ──────────────────────────────────────────────────
-    if (step === 4) return (
-        <Shell>
-            <div>
-                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Where are you headed?</h2>
-                <p className="text-sm text-stone-400">Your target weight shapes your calorie deficit or surplus.</p>
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Goal Weight (lbs)</label>
-                <input type="number" inputMode="numeric" autoFocus placeholder="e.g. 165"
-                    value={form.goalWeight} onChange={e => set({ goalWeight: e.target.value })}
-                    className={inp} />
-                {suggestion && !form.goalWeight && (
-                    <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex gap-2 items-center animate-fade-in">
-                        <Lightbulb size={14} className="text-indigo-500 shrink-0" />
-                        <p className="text-xs text-indigo-700 dark:text-indigo-300 flex-1">
-                            Suggestion: <strong>{suggestion.val} lbs</strong> — {suggestion.reason}
-                        </p>
-                        <button onClick={() => set({ goalWeight: String(suggestion.val) })}
-                            className="text-xs bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-transform shrink-0">
-                            Apply
-                        </button>
-                    </div>
-                )}
-            </div>
-            <Cta onClick={next} disabled={safeInt(form.goalWeight) <= 0} />
-            <button onClick={next} className="text-center text-stone-400 text-sm hover:text-stone-600 dark:hover:text-stone-300 -mt-2 transition-colors">
-                Skip — I'll set this later
-            </button>
-        </Shell>
-    );
-
-    // ── Step 5: Activity ─────────────────────────────────────────────────────
-    if (step === 5) return (
-        <Shell>
-            <div>
-                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">How active are you?</h2>
-                <p className="text-sm text-stone-400">Day-to-day movement — not counting workouts.</p>
-            </div>
-            <div className="space-y-3">
-                {[
-                    { val: 'sedentary', label: 'Mostly sitting',     desc: 'Desk job, minimal walking' },
-                    { val: 'light',     label: 'Lightly active',     desc: 'Some walking, on feet part of the day' },
-                    { val: 'moderate',  label: 'Moderately active',  desc: 'On feet most of the day' },
-                    { val: 'active',    label: 'Very active',        desc: 'Physical job or active all day' },
-                ].map(({ val, label, desc }) => (
-                    <button key={val} onClick={() => set({ activity: val })}
-                        className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
-                            form.activity === val
-                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
-                            : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
-                        }`}>
-                        <span className={`block font-bold text-sm ${form.activity === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
-                        <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
-                    </button>
-                ))}
-            </div>
-            <Cta onClick={next} />
-        </Shell>
-    );
-
-    // ── Step 6: Strength training ────────────────────────────────────────────
-    if (step === 6) return (
-        <Shell>
-            <div>
-                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Do you lift?</h2>
-                <p className="text-sm text-stone-400">Strength training significantly changes your protein target.</p>
-            </div>
-            <div className="space-y-3">
-                {[
-                    { val: 'not_yet',   label: 'Not really',         desc: "I'm starting simple." },
-                    { val: 'sometimes', label: 'Sometimes',          desc: 'A few times a month.' },
-                    { val: 'regular',   label: 'Yes, 2+ days/week',  desc: 'This is part of my routine.' },
-                ].map(({ val, label, desc }) => (
-                    <button key={val} onClick={() => set({ strengthTrainingLevel: val })}
-                        className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
-                            form.strengthTrainingLevel === val
-                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
-                            : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
-                        }`}>
-                        <span className={`block font-bold text-sm ${form.strengthTrainingLevel === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
-                        <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
-                    </button>
-                ))}
-            </div>
-            <Cta onClick={next} />
-        </Shell>
-    );
-
-    // ── Step 7: Blueprint ────────────────────────────────────────────────────
-    if (step === 7) return (
-        <Shell>
-            <div>
-                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Your Blueprint</h2>
-                <p className="text-sm text-stone-500">Science-based estimates from your profile. Adjust anytime in Settings.</p>
-            </div>
-            <div className="space-y-3">
-                {[
-                    { icon: Utensils, label: 'Protein',  val: `${calc.proteinTarget}g`, sub: `Range: ${calc.proteinMin}–${calc.proteinMax}g`, card: 'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800', ic: 'text-teal-700 dark:text-teal-300', vc: 'text-violet-900 dark:text-violet-200' },
-                    { icon: Flame,    label: 'Calories', val: `${calc.calories}`,        sub: 'Daily target',                                   card: 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800', ic: 'text-orange-600 dark:text-orange-400', vc: 'text-orange-900 dark:text-orange-200' },
-                    { icon: Droplet,  label: 'Water',    val: `${calc.water}oz`,         sub: 'Half your weight in oz',                         card: 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-100 dark:border-cyan-800',       ic: 'text-cyan-700 dark:text-cyan-400',   vc: 'text-cyan-900 dark:text-cyan-200' },
-                ].map(({ icon: Icon, label, val, sub, card, ic, vc }) => (
-                    <div key={label} className={`p-5 rounded-2xl border ${card} flex items-center justify-between`}>
-                        <div className="flex items-center gap-3">
-                            <Icon size={20} className={ic} />
+                {/* ── Step 2: Height ── */}
+                {step === 2 && (
+                    <div className="px-6 pt-4 pb-2 space-y-5">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">How tall are you?</h2>
+                            <p className="text-sm text-stone-400">Used to calculate your targets accurately.</p>
+                        </div>
+                        {/* Two-field height — ft then in, each with its own mini numpad */}
+                        <div className="space-y-4">
                             <div>
-                                <div className="font-bold text-stone-700 dark:text-stone-200 text-sm">{label}</div>
-                                <div className="text-xs text-stone-400">{sub}</div>
+                                <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Feet</label>
+                                <NumPad
+                                    value={form.heightFt}
+                                    onChange={v => set({ heightFt: v })}
+                                    onNext={() => {}} // inches field handles next
+                                    nextDisabled={true}
+                                    hint="ft"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Inches</label>
+                                <NumPad
+                                    value={form.heightIn}
+                                    onChange={v => { if (safeInt(v) <= 11) set({ heightIn: v }); }}
+                                    onNext={next}
+                                    nextDisabled={safeInt(form.heightFt) <= 0}
+                                    hint="in"
+                                />
+                            </div>
+                            {healthyRange && (
+                                <div className="p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex gap-2 items-start">
+                                    <Info size={14} className="text-violet-500 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-violet-700 dark:text-violet-300">
+                                        Healthy range for your height: <strong>{healthyRange.min}–{healthyRange.max} lbs</strong>
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Step 3: Age & Sex ── */}
+                {step === 3 && (
+                    <div className="px-6 pt-4 pb-2 space-y-5">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Age & biological sex</h2>
+                            <p className="text-sm text-stone-400">Needed for the BMR formula — used only for math.</p>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Age</label>
+                            <NumPad
+                                value={form.age}
+                                onChange={v => set({ age: v })}
+                                onNext={next}
+                                nextDisabled={safeInt(form.age) <= 0}
+                                hint="years"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Biological Sex</label>
+                            <div className="flex gap-3">
+                                {['female','male'].map(s => (
+                                    <button key={s} onClick={() => { haptic.light(); set({ sex: s }); }}
+                                        className={`flex-1 py-4 rounded-2xl font-bold text-sm border-2 transition-all active:scale-95 ${
+                                            form.sex === s
+                                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
+                                            : 'border-stone-100 dark:border-stone-700 text-stone-500 bg-stone-50 dark:bg-stone-800'
+                                        }`}>
+                                        {s === 'female' ? 'Female' : 'Male'}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                        <div className={`text-2xl font-extrabold ${vc}`}>{val}</div>
                     </div>
-                ))}
-            </div>
+                )}
 
-            <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                className="flex items-center justify-center gap-1 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors mx-auto">
-                {isAdvancedOpen ? 'Hide' : 'Override targets'} {isAdvancedOpen ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
-            </button>
+                {/* ── Step 4: Goal weight ── */}
+                {step === 4 && (
+                    <div className="px-6 pt-4 pb-2 space-y-5">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Where are you headed?</h2>
+                            <p className="text-sm text-stone-400">Your target weight shapes your calorie math.</p>
+                        </div>
+                        <NumPad
+                            value={form.goalWeight}
+                            onChange={v => set({ goalWeight: v })}
+                            onNext={next}
+                            nextDisabled={false}
+                            hint="lbs"
+                        />
+                        {suggestion && !form.goalWeight && (
+                            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex gap-2 items-center">
+                                <Lightbulb size={14} className="text-indigo-500 shrink-0" />
+                                <p className="text-xs text-indigo-700 dark:text-indigo-300 flex-1">
+                                    Suggestion: <strong>{suggestion.val} lbs</strong> — {suggestion.reason}
+                                </p>
+                                <button onClick={() => { haptic.light(); set({ goalWeight: String(suggestion.val) }); }}
+                                    className="text-xs bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-transform shrink-0">
+                                    Use
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
-            {isAdvancedOpen && (
-                <div className="grid grid-cols-3 gap-2 animate-fade-in">
-                    {[
-                        { key: 'manualProtein',  ph: `Pro: ${calc.proteinTarget}` },
-                        { key: 'manualCalories', ph: `Cal: ${calc.calories}` },
-                        { key: 'manualWater',    ph: `H₂O: ${calc.water}` },
-                    ].map(({ key, ph }) => (
-                        <input key={key} type="number" inputMode="numeric" placeholder={ph}
-                            onChange={e => set({ [key]: e.target.value })}
-                            className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
-                    ))}
-                </div>
+                {/* ── Step 5: Activity ── */}
+                {step === 5 && (
+                    <div className="px-6 pt-4 pb-2 space-y-4">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">How active are you?</h2>
+                            <p className="text-sm text-stone-400">Day-to-day movement, not counting workouts.</p>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                { val:'sedentary', label:'Mostly sitting',    desc:'Desk job, minimal walking' },
+                                { val:'light',     label:'Lightly active',    desc:'Some walking, on feet part of the day' },
+                                { val:'moderate',  label:'Moderately active', desc:'On feet most of the day' },
+                                { val:'active',    label:'Very active',       desc:'Physical job or active all day' },
+                            ].map(({ val, label, desc }) => (
+                                <button key={val} onClick={() => { haptic.light(); set({ activity: val }); }}
+                                    className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                                        form.activity === val
+                                        ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
+                                    }`}>
+                                    <span className={`block font-bold text-sm ${form.activity === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
+                                    <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Step 6: Strength training ── */}
+                {step === 6 && (
+                    <div className="px-6 pt-4 pb-2 space-y-4">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Do you lift?</h2>
+                            <p className="text-sm text-stone-400">Strength training significantly changes your protein target.</p>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                { val:'not_yet',   label:'Not really',        desc:"I'm starting simple." },
+                                { val:'sometimes', label:'Sometimes',         desc:'A few times a month.' },
+                                { val:'regular',   label:'Yes, 2+ days/week', desc:'This is part of my routine.' },
+                            ].map(({ val, label, desc }) => (
+                                <button key={val} onClick={() => { haptic.light(); set({ strengthTrainingLevel: val }); }}
+                                    className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                                        form.strengthTrainingLevel === val
+                                        ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
+                                    }`}>
+                                    <span className={`block font-bold text-sm ${form.strengthTrainingLevel === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
+                                    <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Step 7: Blueprint ── */}
+                {step === 7 && (
+                    <div className="px-6 pt-4 pb-2 space-y-4">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Your Blueprint</h2>
+                            <p className="text-sm text-stone-500">Science-based estimates. Adjust anytime in Settings.</p>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                { icon:Utensils, label:'Protein',  val:`${calc.proteinTarget}g`, sub:`Range: ${calc.proteinMin}–${calc.proteinMax}g`, card:'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800', ic:'text-teal-700 dark:text-teal-300', vc:'text-violet-900 dark:text-violet-200' },
+                                { icon:Flame,    label:'Calories', val:`${calc.calories}`,        sub:'Daily target',                                  card:'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800', ic:'text-orange-600 dark:text-orange-400', vc:'text-orange-900 dark:text-orange-200' },
+                                { icon:Droplet,  label:'Water',    val:`${calc.water}oz`,         sub:'Half your weight in oz',                        card:'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-100 dark:border-cyan-800',       ic:'text-cyan-700 dark:text-cyan-400',   vc:'text-cyan-900 dark:text-cyan-200' },
+                            ].map(({ icon:Icon, label, val, sub, card, ic, vc }) => (
+                                <div key={label} className={`p-4 rounded-2xl border ${card} flex items-center justify-between`}>
+                                    <div className="flex items-center gap-3">
+                                        <Icon size={18} className={ic} />
+                                        <div>
+                                            <div className="font-bold text-stone-700 dark:text-stone-200 text-sm">{label}</div>
+                                            <div className="text-xs text-stone-400">{sub}</div>
+                                        </div>
+                                    </div>
+                                    <div className={`text-2xl font-extrabold ${vc}`}>{val}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                            className="flex items-center justify-center gap-1 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors mx-auto">
+                            {isAdvancedOpen ? 'Hide' : 'Override targets'} {isAdvancedOpen ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                        </button>
+                        {isAdvancedOpen && (
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { key:'manualProtein',  ph:`Pro: ${calc.proteinTarget}` },
+                                    { key:'manualCalories', ph:`Cal: ${calc.calories}` },
+                                    { key:'manualWater',    ph:`H₂O: ${calc.water}` },
+                                ].map(({ key, ph }) => (
+                                    <input key={key} type="number" inputMode="numeric" placeholder={ph}
+                                        onChange={e => set({ [key]: e.target.value })}
+                                        className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>{/* end sliding content */}
+
+            {/* Fixed footer — Back + Next/Accept */}
+            {step === 1 && <Footer onNext={next} nextDisabled={safeInt(form.currentWeight) <= 0} />}
+            {step === 2 && <Footer onNext={next} nextDisabled={safeInt(form.heightFt) <= 0} />}
+            {step === 3 && <Footer onNext={next} nextDisabled={safeInt(form.age) <= 0} />}
+            {step === 4 && <Footer onNext={next} nextDisabled={false} skipLabel="Skip — I'll set this later" onSkip={next} />}
+            {step === 5 && <Footer onNext={next} nextDisabled={false} />}
+            {step === 6 && <Footer onNext={next} nextDisabled={false} />}
+            {step === 7 && (
+                <Footer
+                    onNext={() => {
+                        haptic.success();
+                        onComplete({
+                            ...form,
+                            targets: {
+                                calories: safeInt(form.manualCalories) || calc.calories,
+                                protein:  safeInt(form.manualProtein)  || calc.proteinTarget,
+                                water:    safeInt(form.manualWater)    || calc.water,
+                            },
+                        });
+                    }}
+                    nextDisabled={false}
+                    nextLabel="Accept & Start Tracking"
+                    last
+                />
             )}
-
-            <Cta last label="Accept & Start Tracking" onClick={() => {
-                haptic.success();
-                onComplete({
-                    ...form,
-                    targets: {
-                        calories: safeInt(form.manualCalories) || calc.calories,
-                        protein:  safeInt(form.manualProtein)  || calc.proteinTarget,
-                        water:    safeInt(form.manualWater)    || calc.water,
-                    },
-                });
-            }} />
-        </Shell>
+        </div>
     );
-
-    return null;
 };
 
 
@@ -2260,6 +2346,72 @@ const CheatSheet = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
 };
 
 // --- MAIN APP COMPONENT ---
+
+// ── INSTALL PROMPT ───────────────────────────────────────────────────────────
+// Shown once after first log entry. Detects platform and gives right instructions.
+// Stored in localStorage so it only shows once.
+const InstallPrompt = ({ onDismiss }) => {
+    const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                      || window.navigator.standalone === true;
+
+    // Don't show if already installed
+    if (isStandalone) { onDismiss(); return null; }
+
+    const instructions = isIOS
+        ? [{ icon: '↑', text: 'Tap the Share button in Safari' }, { icon: '⊞', text: 'Tap "Add to Home Screen"' }, { icon: '✓',  text: 'Tap "Add" — done!' }]
+        : isAndroid
+        ? [{ icon: '⋮', text: 'Tap the menu in Chrome (top right)' }, { icon: '⊞', text: 'Tap "Add to Home Screen"' }, { icon: '✓',  text: 'Tap "Add" — done!' }]
+        : [{ icon: '⊞', text: 'Use your browser's "Install" or "Add to Home Screen" option' }];
+
+    return (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-end justify-center p-4 z-[70] animate-fade-in">
+            <div className="bg-white dark:bg-stone-900 w-full max-w-sm rounded-3xl shadow-2xl border border-stone-100 dark:border-stone-800 animate-slide-in-up overflow-hidden">
+                {/* Header strip */}
+                <div className="bg-gradient-to-r from-violet-600 to-teal-500 p-5 flex items-center gap-4">
+                    {/* Mini bar chart icon */}
+                    <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-end justify-center gap-1 p-2 flex-shrink-0">
+                        <div className="w-2 bg-white/60 rounded-sm" style={{height:'40%'}}></div>
+                        <div className="w-2 bg-white/80 rounded-sm" style={{height:'65%'}}></div>
+                        <div className="w-2 bg-white rounded-sm"    style={{height:'90%'}}></div>
+                    </div>
+                    <div>
+                        <div className="text-white font-extrabold text-base">Install Steady</div>
+                        <div className="text-white/75 text-xs">Add to your home screen</div>
+                    </div>
+                </div>
+                {/* Body */}
+                <div className="p-5">
+                    <p className="text-sm text-stone-600 dark:text-stone-400 mb-5 leading-relaxed">
+                        Steady works best as a home screen app — faster to open, feels native, and keeps your data right on your device.
+                    </p>
+                    <div className="space-y-3 mb-5">
+                        {instructions.map(({ icon, text }, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex items-center justify-center text-violet-600 dark:text-violet-300 font-bold text-sm flex-shrink-0">
+                                    {icon}
+                                </div>
+                                <span className="text-sm text-stone-700 dark:text-stone-300">{text}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={onDismiss}
+                            className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 font-bold rounded-xl text-sm active:scale-95 transition-transform">
+                            Maybe Later
+                        </button>
+                        <button onClick={onDismiss}
+                            className="flex-1 py-3 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">
+                            Got It
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Steady = () => {
     const [profile, setProfile] = useState(DB.getProfile());
     const [selectedDate, setSelectedDate] = useState(getTodayStr());
@@ -2267,6 +2419,7 @@ const Steady = () => {
     const [view, setView] = useState('dashboard');
     const [showAddModal, setShowAddModal] = useState(false);
     const [showWeightModal, setShowWeightModal] = useState(false);
+    const [showInstallPrompt, setShowInstallPrompt] = useState(false);
     const [isDark, setIsDark] = useState(false);
     const [recentFoods, setRecentFoods] = useState(DB.getRecentFoods());
     const [toast, setToast] = useState(null);
@@ -2400,6 +2553,13 @@ const Steady = () => {
                 setRecentFoods(DB.getRecentFoods());
             }
             setToast({ message: `Added ${food.name.split(' (')[0]}`, type: 'success' });
+            // Show install prompt on first-ever food log if not already installed
+            const hasSeenInstall = localStorage.getItem('steady_install_seen');
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (!hasSeenInstall && !isStandalone) {
+                setTimeout(() => setShowInstallPrompt(true), 800);
+                localStorage.setItem('steady_install_seen', '1');
+            }
         }
     }, [logs, updateLog, editingItem, selectedDate, view]);
 
@@ -2769,6 +2929,9 @@ const Steady = () => {
                 initialData={editingItem?.item}
             />
             <WeightUpdateModal isOpen={showWeightModal} onClose={() => setShowWeightModal(false)} currentWeight={profile.currentWeight} onUpdate={handleUpdateWeight} />
+            {showInstallPrompt && (
+                <InstallPrompt onDismiss={() => setShowInstallPrompt(false)} />
+            )}
             
             {/* Toast */}
             {toast && (
