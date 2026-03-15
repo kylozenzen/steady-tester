@@ -86,10 +86,9 @@ const DB = {
         return logs;
     },
     clearAll: () => {
-        if(confirm("Are you sure? This deletes all local data.")) {
-            localStorage.clear();
-            window.location.reload();
-        }
+        // Confirmation is handled by the in-app ConfirmResetModal in SettingsView
+        localStorage.clear();
+        window.location.reload();
     },
     exportData: () => {
         const data = {
@@ -631,7 +630,7 @@ const SupportView = ({ onBack }) => {
                     <p className="text-stone-800 dark:text-stone-200 font-medium mb-2">If Steady has helped you...</p>
                     <p className="text-xs text-stone-500 dark:text-stone-400">Consider buying us a coffee. It helps cover database costs and keeps the app free for everyone.</p>
                 </div>
-                <button onClick={() => alert("This would link to your Stripe/BuyMeACoffee page!")} className="w-full py-4 bg-[#FFDD00] text-stone-900 font-bold rounded-2xl shadow-lg shadow-yellow-100 dark:shadow-none hover:bg-[#FACC15] transition-transform active:scale-95 flex items-center justify-center gap-2">
+                <button onClick={() => window.open('https://buymeacoffee.com/', '_blank')} className="w-full py-4 bg-[#FFDD00] text-stone-900 font-bold rounded-2xl shadow-lg shadow-yellow-100 dark:shadow-none hover:bg-[#FACC15] transition-transform active:scale-95 flex items-center justify-center gap-2">
                     <Coffee size={20} /> Buy us a Coffee
                 </button>
             </div>
@@ -639,54 +638,76 @@ const SupportView = ({ onBack }) => {
     );
 };
 
-const InsightCard = ({ proteinRemaining, caloriesRemaining, proteinTarget }) => {
+const InsightCard = ({ proteinRemaining, caloriesOver, caloriesRemaining, proteinTarget }) => {
     const hoursLeft = 24 - new Date().getHours();
     
-    // Determine what insight to show
     let insight = null;
-    
-    if (proteinRemaining > 30 && hoursLeft < 6) {
-        // Short on protein, running out of day
-        const suggestions = FOOD_LIBRARY
-            .filter(f => f.protein >= 20)
-            .sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories))
-            .slice(0, 2);
-        
+
+    // Priority 1 — meaningfully over on calories (teaching moment)
+    if (caloriesOver >= 200) {
+        const isAlsoProteinDone = proteinRemaining <= 0;
         insight = {
-            type: 'warning',
-            icon: AlertCircle,
-            title: `${proteinRemaining}g protein to go`,
-            message: `${hoursLeft} hours left today. Quick wins:`,
-            suggestions: suggestions.map(s => `${s.name} (${s.protein}g)`)
+            type: 'over',
+            icon: TrendingUp,
+            title: `${caloriesOver} cal over today`,
+            message: isAlsoProteinDone
+                ? `Protein goal done though — that's the important win. One day over won't derail you.`
+                : `Worth knowing for next time. Protein is still ${proteinRemaining}g short — prioritise that tomorrow.`,
         };
+    // Priority 2 — slightly over (gentle nudge, not alarm)
+    } else if (caloriesOver > 0 && caloriesOver < 200) {
+        insight = {
+            type: 'nudge',
+            icon: AlertCircle,
+            title: `${caloriesOver} cal over`,
+            message: `Just a small overage — totally manageable. Stay consistent and it evens out.`,
+        };
+    // Priority 3 — protein done, calories budget left
     } else if (proteinRemaining <= 0 && caloriesRemaining > 200) {
         insight = {
             type: 'success',
             icon: Sparkles,
             title: 'Protein goal hit! 🎉',
-            message: `You still have ${caloriesRemaining} cal to play with for snacks or treats.`
+            message: `You still have ${caloriesRemaining} cal left if you want a snack or treat.`,
         };
+    // Priority 4 — almost at protein goal
     } else if (proteinRemaining > 0 && proteinRemaining <= 20) {
         insight = {
             type: 'close',
             icon: Target,
             title: 'Almost there!',
-            message: `Just ${proteinRemaining}g more protein. A Greek yogurt or a couple eggs would do it.`
+            message: `Just ${proteinRemaining}g more protein. A Greek yogurt or a couple of eggs would do it.`,
+        };
+    // Priority 5 — running out of day with a big protein gap
+    } else if (proteinRemaining > 30 && hoursLeft < 6) {
+        const suggestions = FOOD_LIBRARY
+            .filter(f => f.protein >= 20)
+            .sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories))
+            .slice(0, 2);
+        insight = {
+            type: 'warning',
+            icon: AlertCircle,
+            title: `${proteinRemaining}g protein to go`,
+            message: `${hoursLeft} hours left today. Quick wins:`,
+            suggestions: suggestions.map(s => `${s.name} (${s.protein}g)`),
         };
     }
-    
+
     if (!insight) return null;
-    
+
     const colors = {
-        warning: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800',
+        over:    'bg-red-50    dark:bg-red-900/20    border-red-100    dark:border-red-800',
+        nudge:   'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800',
+        warning: 'bg-amber-50  dark:bg-amber-900/20  border-amber-100  dark:border-amber-800',
         success: 'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800',
-        close: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
+        close:   'bg-blue-50   dark:bg-blue-900/20   border-blue-100   dark:border-blue-800',
     };
-    
     const iconColors = {
-        warning: 'text-amber-600 dark:text-amber-400',
+        over:    'text-red-500    dark:text-red-400',
+        nudge:   'text-orange-500 dark:text-orange-400',
+        warning: 'text-amber-600  dark:text-amber-400',
         success: 'text-violet-600 dark:text-violet-300',
-        close: 'text-blue-600 dark:text-blue-400'
+        close:   'text-blue-600   dark:text-blue-400',
     };
 
     return (
@@ -754,6 +775,31 @@ const QuickLogSection = ({ recentFoods, onQuickAdd, yesterdayItems, onCopyYester
     );
 };
 
+const ConfirmResetModal = ({ isOpen, onConfirm, onCancel }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
+            <div className="bg-white dark:bg-stone-900 w-full max-w-sm rounded-3xl shadow-2xl p-6 border border-stone-100 dark:border-stone-800 animate-zoom-in">
+                <div className="w-12 h-12 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <LogOut size={22} className="text-red-500" />
+                </div>
+                <h3 className="text-lg font-bold text-stone-800 dark:text-stone-100 text-center mb-2">Reset all data?</h3>
+                <p className="text-sm text-stone-500 dark:text-stone-400 text-center mb-6 leading-relaxed">
+                    This permanently deletes your profile, food logs, and weight history from this device. There's no undo.
+                </p>
+                <div className="flex gap-3">
+                    <button onClick={onCancel} className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors active:scale-95">
+                        Cancel
+                    </button>
+                    <button onClick={onConfirm} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors active:scale-95">
+                        Yes, Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavigate, onImport, selectedDate }) => {
     const [formData, setFormData] = useState({ 
         currentWeight: profile.currentWeight || '', 
@@ -764,6 +810,7 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
     const [isSaving, setIsSaving] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [importStatus, setImportStatus] = useState(null);
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
     const fileInputRef = useRef(null);
 
     const handleSave = async () => {
@@ -888,281 +935,408 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
             </div>
             
             <div className="text-center">
-                <button onClick={onLogout} className="text-stone-400 dark:text-stone-600 text-sm hover:text-red-500 flex items-center justify-center gap-2 mx-auto transition-colors">
+                <button onClick={() => { haptic.light(); setShowResetConfirm(true); }} className="text-stone-400 dark:text-stone-600 text-sm hover:text-red-500 flex items-center justify-center gap-2 mx-auto transition-colors">
                     <LogOut size={14} /> Reset App Data
                 </button>
             </div>
+
+            <ConfirmResetModal
+                isOpen={showResetConfirm}
+                onCancel={() => setShowResetConfirm(false)}
+                onConfirm={() => { haptic.error(); onLogout(); }}
+            />
+        </div>
+    );
+};
+
+
+// ── ONBOARDING ──────────────────────────────────────────────────────────────
+// One focused question per step — reduces mobile drop-off.
+// Steps: 0=Welcome  1=Weight  2=Height  3=Age+Sex  4=Goal  5=Activity  6=Training  7=Blueprint
+
+const OnboardProgress = ({ step }) => {
+    if (step === 0) return null;
+    const total = 7; // steps 1-7
+    const filled = step - 1;
+    return (
+        <div className="flex gap-1.5 mb-4">
+            {Array.from({ length: total }).map((_, i) => (
+                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                    i < filled  ? 'bg-violet-500' :
+                    i === filled ? 'bg-violet-300' :
+                    'bg-stone-200 dark:bg-stone-700'
+                }`} />
+            ))}
         </div>
     );
 };
 
 const Onboarding = ({ onComplete }) => {
     const [step, setStep] = useState(0);
-    const [formData, setFormData] = useState({ 
-        currentWeight: '', 
-        goalWeight: '', 
-        age: '', 
-        heightFt: '', 
-        heightIn: '', 
-        sex: 'female', 
-        activity: 'sedentary', 
-        strengthTrainingLevel: 'not_yet', 
-        manualCalories: '', 
-        manualProtein: '', 
-        manualWater: '' 
+    const [form, setForm] = useState({
+        currentWeight: '', goalWeight: '', age: '',
+        heightFt: '', heightIn: '', sex: 'female',
+        activity: 'sedentary', strengthTrainingLevel: 'not_yet',
+        manualCalories: '', manualProtein: '', manualWater: '',
     });
-    const [calculated, setCalculated] = useState({ calories: 0, proteinTarget: 0, water: 0 });
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-    useEffect(() => {
-        const curWeight = safeInt(formData.currentWeight);
-        const heightTotalInches = (safeInt(formData.heightFt) * 12) + safeInt(formData.heightIn);
-        const age = safeInt(formData.age);
-        if (curWeight > 0 && heightTotalInches > 0 && age > 0) {
-            const bmr = calculateBMR(curWeight, heightTotalInches, age, formData.sex);
-            const tdee = calculateCalorieGoal(bmr, formData.activity, curWeight, formData.goalWeight);
-            const proteinRec = recommendProtein(curWeight, heightTotalInches, formData.goalWeight, formData.strengthTrainingLevel);
-            const water = Math.round(curWeight / 2);
-            setCalculated({ 
-                calories: tdee, 
-                proteinTarget: proteinRec.target, 
-                proteinMin: proteinRec.min, 
-                proteinMax: proteinRec.max, 
-                water, 
-                proteinMethod: proteinRec.method 
-            });
-        }
-    }, [formData]);
+    const next = () => { haptic.medium(); setStep(s => s + 1); };
+    const back = () => { haptic.light();  setStep(s => s - 1); };
+    const set  = (patch) => setForm(f => ({ ...f, ...patch }));
 
-    const suggestion = step === 1 ? suggestTargetWeight(safeInt(formData.currentWeight), formData.heightFt, formData.heightIn) : null;
-    
-    // Calculate healthy range
-    const healthyRange = useMemo(() => 
-        suggestHealthyRange(formData.heightFt, formData.heightIn), 
-        [formData.heightFt, formData.heightIn]
+    // Live-calculate targets whenever form changes
+    const calc = useMemo(() => {
+        const w  = safeInt(form.currentWeight);
+        const hi = (safeInt(form.heightFt) * 12) + safeInt(form.heightIn);
+        const a  = safeInt(form.age);
+        if (!w || !hi || !a) return { calories: 0, proteinTarget: 0, proteinMin: 0, proteinMax: 0, water: 0 };
+        const bmr  = calculateBMR(w, hi, a, form.sex);
+        const cal  = calculateCalorieGoal(bmr, form.activity, w, form.goalWeight);
+        const prec = recommendProtein(w, hi, form.goalWeight, form.strengthTrainingLevel);
+        return { calories: cal, proteinTarget: prec.target, proteinMin: prec.min, proteinMax: prec.max, water: Math.round(w / 2) };
+    }, [form]);
+
+    const healthyRange = useMemo(() => suggestHealthyRange(form.heightFt, form.heightIn), [form.heightFt, form.heightIn]);
+    const suggestion   = useMemo(() => suggestTargetWeight(safeInt(form.currentWeight), form.heightFt, form.heightIn), [form.currentWeight, form.heightFt, form.heightIn]);
+
+    // Shared input style
+    const inp = "w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none";
+
+    // Shared step shell — progress bar + back button + centered content
+    const Shell = ({ children, noPad }) => (
+        <div className={`w-full h-full flex flex-col animate-fade-in overflow-y-auto ${noPad ? '' : 'p-6'}`}>
+            {!noPad && <OnboardProgress step={step} />}
+            {step > 0 && (
+                <button onClick={back} className={`flex items-center gap-1 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 text-sm self-start active:scale-95 transition-transform ${noPad ? 'mt-6 mx-6' : '-mt-1 mb-4'}`}>
+                    <ChevronLeft size={15} /> Back
+                </button>
+            )}
+            <div className={`flex-1 flex flex-col justify-center ${noPad ? 'px-6 pb-8' : 'space-y-6'}`}>
+                {children}
+            </div>
+        </div>
     );
 
+    // Shared CTA button
+    const Cta = ({ label = 'Continue', onClick, disabled, last }) => (
+        <button onClick={onClick} disabled={disabled}
+            className={`w-full py-4 font-bold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg mt-2 ${
+                last
+                ? 'bg-violet-600 text-white shadow-violet-200 dark:shadow-none hover:bg-violet-700'
+                : 'bg-stone-800 dark:bg-stone-700 text-stone-50 shadow-stone-200 dark:shadow-none hover:bg-stone-700'
+            }`}>
+            {label}{!last && <ArrowRight size={18} />}
+        </button>
+    );
+
+    // ── Step 0: Welcome ──────────────────────────────────────────────────────
     if (step === 0) return (
         <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 text-center animate-fade-in">
-            <div className="w-16 h-16 bg-violet-50 dark:bg-violet-900/30 text-teal-700 dark:text-teal-300 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Leaf size={32} />
+            <div className="w-20 h-20 bg-gradient-to-br from-violet-600 to-teal-500 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-violet-200 dark:shadow-none">
+                <Leaf size={36} className="text-white" />
             </div>
-            <div className="mb-8">
-                <span className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest">Welcome to</span>
-                <h1 className="text-3xl font-extrabold text-stone-800 dark:text-stone-100 mt-1">Steady</h1>
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Welcome to</span>
+            <h1 className="text-4xl font-extrabold text-stone-800 dark:text-stone-100 mt-1 mb-8">Steady</h1>
+            <div className="w-full text-left space-y-4 text-sm mb-10 bg-stone-50 dark:bg-stone-800 p-6 rounded-2xl border border-stone-100 dark:border-stone-700">
+                {[
+                    { n: 1, color: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300',    bold: 'Evidence-based.',     desc: 'Scientific formulas, real safety guardrails.' },
+                    { n: 2, color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', bold: 'No database needed.', desc: 'Log what you know. Learn what you eat.' },
+                    { n: 3, color: 'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300',    bold: "You're in control.",  desc: 'Starting points, not a contract.' },
+                ].map(({ n, color, bold, desc }) => (
+                    <div key={n} className="flex gap-3">
+                        <div className={`mt-0.5 ${color} w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0`}>{n}</div>
+                        <p className="text-stone-600 dark:text-stone-400"><strong className="text-stone-800 dark:text-stone-200">{bold}</strong> {desc}</p>
+                    </div>
+                ))}
             </div>
-            <div className="w-full text-left space-y-4 text-stone-600 dark:text-stone-400 text-sm mb-8 bg-stone-50 dark:bg-stone-800 p-6 rounded-2xl border border-stone-100 dark:border-stone-700">
-                <div className="flex gap-3">
-                    <div className="mt-1 bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</div>
-                    <p><strong>Evidence-based.</strong> We use scientific formulas and safety guardrails.</p>
-                </div>
-                <div className="flex gap-3">
-                    <div className="mt-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-400 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">2</div>
-                    <p><strong>Simple inputs.</strong> No food database. You log what you know.</p>
-                </div>
-                <div className="flex gap-3">
-                    <div className="mt-1 bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-300 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">3</div>
-                    <p><strong>You stay in control.</strong> These are starting points, not a contract.</p>
-                </div>
-            </div>
-            <button onClick={() => { haptic.medium(); setStep(1); }} className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 rounded-2xl font-bold hover:bg-stone-700 transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-2">
+            <button onClick={next} className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 rounded-2xl font-bold hover:bg-stone-700 transition-colors shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
                 Build My Plan <ArrowRight size={18} />
             </button>
         </div>
     );
 
+    // ── Step 1: Current weight ───────────────────────────────────────────────
     if (step === 1) return (
-        <div className="w-full h-full p-6 flex flex-col justify-center animate-slide-right overflow-y-auto">
-            <h2 className="text-xl font-bold text-stone-800 dark:text-stone-100 mb-6 text-center">The Basics</h2>
-            <div className="space-y-6 mb-8 w-full">
-                <div>
-                    <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Current Weight</label>
-                    <input type="number" inputMode="numeric" value={formData.currentWeight} onChange={e => setFormData({...formData, currentWeight: e.target.value})} className="w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" placeholder="lbs" autoFocus />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Target Weight</label>
-                    <input type="number" inputMode="numeric" value={formData.goalWeight} onChange={e => setFormData({...formData, goalWeight: e.target.value})} className="w-full p-4 text-lg bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" placeholder="lbs" />
-                    
-                    {/* Updated Healthy Range Nudge */}
-                    {healthyRange && !formData.goalWeight && (
-                        <div className="mt-2 p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex gap-2 items-start animate-fade-in">
-                            <Info size={16} className="text-violet-600 dark:text-violet-300 shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                                <p className="text-xs font-bold text-teal-700 dark:text-teal-300">
-                                    Healthy range for your height:
-                                </p>
-                                <p className="text-sm font-bold text-violet-700 dark:text-violet-200">
-                                    {healthyRange.min} - {healthyRange.max} lbs
-                                </p>
-                                <p className="text-[10px] text-violet-600 dark:text-violet-300 mt-1">
-                                    Based on standard BMI health guidelines.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {suggestion && !formData.goalWeight && (
-                        <div className="mt-2 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex gap-2 items-start">
-                            <Lightbulb size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                                <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Suggestion: {suggestion.val} lbs</p>
-                                <p className="text-[10px] text-indigo-600 dark:text-indigo-400">{suggestion.reason}</p>
-                            </div>
-                            <button onClick={() => setFormData({...formData, goalWeight: suggestion.val})} className="text-xs bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-transform">Apply</button>
-                        </div>
-                    )}
-                </div>
+        <Shell>
+            <div>
+                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">What do you weigh?</h2>
+                <p className="text-sm text-stone-400">Just your starting point — no judgment here.</p>
             </div>
-            <div className="border-t border-stone-100 dark:border-stone-800 pt-6 w-full">
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-1">Height</label>
-                        <div className="flex gap-2">
-                            <input type="number" inputMode="numeric" value={formData.heightFt} onChange={e => setFormData({...formData, heightFt: e.target.value})} className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl text-stone-800 dark:text-stone-100 outline-none" placeholder="ft" />
-                            <input type="number" inputMode="numeric" value={formData.heightIn} onChange={e => setFormData({...formData, heightIn: e.target.value})} className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl text-stone-800 dark:text-stone-100 outline-none" placeholder="in" />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-1">Age & Sex</label>
-                        <div className="flex gap-2">
-                            <input type="number" inputMode="numeric" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="w-20 p-3 bg-stone-50 dark:bg-stone-800 rounded-xl text-stone-800 dark:text-stone-100 outline-none" placeholder="Age" />
-                            <select value={formData.sex} onChange={e => setFormData({...formData, sex: e.target.value})} className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl text-sm text-stone-800 dark:text-stone-100 outline-none">
-                                <option value="female">F</option>
-                                <option value="male">M</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+            <div>
+                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Current Weight (lbs)</label>
+                <input type="number" inputMode="numeric" autoFocus placeholder="e.g. 185"
+                    value={form.currentWeight} onChange={e => set({ currentWeight: e.target.value })}
+                    className={inp} />
             </div>
-            <button 
-                onClick={() => { if(safeInt(formData.currentWeight) > 0 && safeInt(formData.heightFt) > 0 && safeInt(formData.age) > 0) { haptic.medium(); setStep(2); }}} 
-                disabled={safeInt(formData.currentWeight) <= 0 || safeInt(formData.heightFt) <= 0 || safeInt(formData.age) <= 0} 
-                className="w-full mt-4 bg-stone-800 dark:bg-stone-700 text-stone-50 py-4 rounded-2xl font-bold disabled:opacity-50 hover:bg-stone-700 transition-colors active:scale-95"
-            >
-                Next: Training
-            </button>
-        </div>
+            <Cta onClick={next} disabled={safeInt(form.currentWeight) <= 0} />
+        </Shell>
     );
 
+    // ── Step 2: Height ───────────────────────────────────────────────────────
     if (step === 2) return (
-        <div className="w-full h-full p-6 flex flex-col justify-center animate-slide-right overflow-y-auto">
-            <h2 className="text-xl font-bold text-stone-800 dark:text-stone-100 mb-2 text-center">Training</h2>
-            <div className="space-y-4 mb-8 w-full">
-                {['not_yet', 'sometimes', 'regular'].map(level => (
-                    <label key={level} className="block p-4 rounded-2xl border-2 cursor-pointer transition-all border-stone-100 dark:border-stone-800 hover:border-violet-100 dark:hover:border-violet-900 has-[:checked]:border-violet-700 dark:has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 dark:has-[:checked]:bg-violet-900/20 active:scale-[0.98]">
-                        <div className="flex items-center gap-3">
-                            <input type="radio" name="strengthTrainingLevel" value={level} checked={formData.strengthTrainingLevel === level} onChange={e => setFormData({...formData, strengthTrainingLevel: e.target.value})} className="w-5 h-5 text-violet-700 border-stone-300 focus:ring-violet-500" />
-                            <div>
-                                <span className="block font-bold text-stone-800 dark:text-stone-100">{level === 'not_yet' ? 'Not yet' : level === 'sometimes' ? 'Sometimes' : 'Yes (2+ days/week)'}</span>
-                                <span className="text-xs text-stone-500 dark:text-stone-400">{level === 'not_yet' ? "I'm starting simple." : level === 'sometimes' ? 'A few times a month.' : 'This is part of my routine.'}</span>
-                            </div>
-                        </div>
-                    </label>
-                ))}
+        <Shell>
+            <div>
+                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">How tall are you?</h2>
+                <p className="text-sm text-stone-400">Used to calculate your calorie and protein targets.</p>
             </div>
-            <button onClick={() => { haptic.medium(); setStep(3); }} className="w-full bg-stone-800 dark:bg-stone-700 text-stone-50 py-4 rounded-2xl font-bold hover:bg-stone-700 transition-colors active:scale-95">
-                Calculate Plan
-            </button>
-        </div>
-    );
-
-    if (step === 3) return (
-        <div className="w-full h-full p-6 flex flex-col justify-center animate-slide-right overflow-y-auto">
-            <h2 className="text-xl font-bold text-stone-800 dark:text-stone-100 mb-2 text-center">Your Blueprint</h2>
-            <p className="text-stone-500 text-center text-sm mb-6">Scientific estimates based on your profile.</p>
-            <div className="space-y-4 mb-8 w-full">
-                <div className="bg-violet-50 dark:bg-violet-900/20 p-5 rounded-2xl border border-violet-100 dark:border-violet-800">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                            <Utensils size={18} className="text-teal-700 dark:text-teal-300" />
-                            <span className="font-bold text-violet-900 dark:text-violet-300">Protein</span>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-2xl font-bold text-violet-900 dark:text-violet-300">{calculated.proteinTarget}g</div>
-                            <div className="text-xs font-medium text-violet-700 dark:text-violet-500">Range: {calculated.proteinMin}-{calculated.proteinMax}g</div>
-                        </div>
+            <div>
+                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Height</label>
+                <div className="flex gap-3">
+                    <div className="flex-1 relative">
+                        <input type="number" inputMode="numeric" autoFocus placeholder="5"
+                            value={form.heightFt} onChange={e => set({ heightFt: e.target.value })}
+                            className={inp} />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm">ft</span>
+                    </div>
+                    <div className="flex-1 relative">
+                        <input type="number" inputMode="numeric" placeholder="9"
+                            value={form.heightIn} onChange={e => set({ heightIn: e.target.value })}
+                            className={inp} />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm">in</span>
                     </div>
                 </div>
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-5 rounded-2xl border border-orange-100 dark:border-orange-800">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                            <Flame size={18} className="text-orange-700 dark:text-orange-400" />
-                            <span className="font-bold text-orange-900 dark:text-orange-300">Calories</span>
-                        </div>
-                        <div className="text-2xl font-bold text-orange-900 dark:text-orange-300">{calculated.calories}</div>
-                    </div>
-                </div>
-                <div className="bg-cyan-50 dark:bg-cyan-900/20 p-5 rounded-2xl border border-cyan-100 dark:border-cyan-800">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                            <Droplet size={18} className="text-cyan-700 dark:text-cyan-400" />
-                            <span className="font-bold text-cyan-900 dark:text-cyan-300">Water</span>
-                        </div>
-                        <div className="text-2xl font-bold text-cyan-900 dark:text-cyan-300">{calculated.water}oz</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div className="mb-6 w-full">
-                <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className="w-full flex items-center justify-center gap-2 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors mb-4">
-                    {isAdvancedOpen ? 'Hide' : 'Show'} Advanced Overrides {isAdvancedOpen ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
-                </button>
-                {isAdvancedOpen && (
-                    <div className="grid grid-cols-3 gap-2 animate-fade-in">
-                        <input type="number" inputMode="numeric" placeholder={`Pro: ${calculated.proteinTarget}`} onChange={e => setFormData({...formData, manualProtein: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
-                        <input type="number" inputMode="numeric" placeholder={`Cal: ${calculated.calories}`} onChange={e => setFormData({...formData, manualCalories: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
-                        <input type="number" inputMode="numeric" placeholder={`H2O: ${calculated.water}`} onChange={e => setFormData({...formData, manualWater: e.target.value})} className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
+                {healthyRange && (
+                    <div className="mt-3 p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex gap-2 items-start animate-fade-in">
+                        <Info size={14} className="text-violet-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-violet-700 dark:text-violet-300">
+                            Healthy range for your height: <strong>{healthyRange.min}–{healthyRange.max} lbs</strong>
+                        </p>
                     </div>
                 )}
             </div>
-            
-            <button 
-                onClick={() => { 
-                    haptic.success();
-                    onComplete({ 
-                        ...formData, 
-                        targets: { 
-                            calories: safeInt(formData.manualCalories) || calculated.calories, 
-                            protein: safeInt(formData.manualProtein) || calculated.proteinTarget, 
-                            water: safeInt(formData.manualWater) || calculated.water 
-                        } 
-                    }); 
-                }} 
-                className="w-full bg-stone-800 dark:bg-stone-700 text-stone-50 py-4 rounded-2xl font-bold shadow-lg shadow-stone-200 dark:shadow-none hover:bg-stone-700 transition-colors active:scale-95"
-            >
-                Accept & Start Tracking
-            </button>
-        </div>
+            <Cta onClick={next} disabled={safeInt(form.heightFt) <= 0} />
+        </Shell>
     );
+
+    // ── Step 3: Age & Sex ────────────────────────────────────────────────────
+    if (step === 3) return (
+        <Shell>
+            <div>
+                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Age & biological sex</h2>
+                <p className="text-sm text-stone-400">Needed for the BMR formula — used only for math.</p>
+            </div>
+            <div>
+                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Your Age</label>
+                <input type="number" inputMode="numeric" autoFocus placeholder="e.g. 34"
+                    value={form.age} onChange={e => set({ age: e.target.value })}
+                    className={inp} />
+            </div>
+            <div>
+                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Biological Sex</label>
+                <div className="flex gap-3">
+                    {['female', 'male'].map(s => (
+                        <button key={s} onClick={() => set({ sex: s })}
+                            className={`flex-1 py-4 rounded-2xl font-bold text-sm border-2 transition-all active:scale-95 ${
+                                form.sex === s
+                                ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
+                                : 'border-stone-100 dark:border-stone-700 text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-800'
+                            }`}>
+                            {s === 'female' ? 'Female' : 'Male'}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <Cta onClick={next} disabled={safeInt(form.age) <= 0} />
+        </Shell>
+    );
+
+    // ── Step 4: Goal weight ──────────────────────────────────────────────────
+    if (step === 4) return (
+        <Shell>
+            <div>
+                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Where are you headed?</h2>
+                <p className="text-sm text-stone-400">Your target weight shapes your calorie deficit or surplus.</p>
+            </div>
+            <div>
+                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">Goal Weight (lbs)</label>
+                <input type="number" inputMode="numeric" autoFocus placeholder="e.g. 165"
+                    value={form.goalWeight} onChange={e => set({ goalWeight: e.target.value })}
+                    className={inp} />
+                {suggestion && !form.goalWeight && (
+                    <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex gap-2 items-center animate-fade-in">
+                        <Lightbulb size={14} className="text-indigo-500 shrink-0" />
+                        <p className="text-xs text-indigo-700 dark:text-indigo-300 flex-1">
+                            Suggestion: <strong>{suggestion.val} lbs</strong> — {suggestion.reason}
+                        </p>
+                        <button onClick={() => set({ goalWeight: String(suggestion.val) })}
+                            className="text-xs bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-transform shrink-0">
+                            Apply
+                        </button>
+                    </div>
+                )}
+            </div>
+            <Cta onClick={next} disabled={safeInt(form.goalWeight) <= 0} />
+            <button onClick={next} className="text-center text-stone-400 text-sm hover:text-stone-600 dark:hover:text-stone-300 -mt-2 transition-colors">
+                Skip — I'll set this later
+            </button>
+        </Shell>
+    );
+
+    // ── Step 5: Activity ─────────────────────────────────────────────────────
+    if (step === 5) return (
+        <Shell>
+            <div>
+                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">How active are you?</h2>
+                <p className="text-sm text-stone-400">Day-to-day movement — not counting workouts.</p>
+            </div>
+            <div className="space-y-3">
+                {[
+                    { val: 'sedentary', label: 'Mostly sitting',     desc: 'Desk job, minimal walking' },
+                    { val: 'light',     label: 'Lightly active',     desc: 'Some walking, on feet part of the day' },
+                    { val: 'moderate',  label: 'Moderately active',  desc: 'On feet most of the day' },
+                    { val: 'active',    label: 'Very active',        desc: 'Physical job or active all day' },
+                ].map(({ val, label, desc }) => (
+                    <button key={val} onClick={() => set({ activity: val })}
+                        className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                            form.activity === val
+                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                            : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
+                        }`}>
+                        <span className={`block font-bold text-sm ${form.activity === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
+                        <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
+                    </button>
+                ))}
+            </div>
+            <Cta onClick={next} />
+        </Shell>
+    );
+
+    // ── Step 6: Strength training ────────────────────────────────────────────
+    if (step === 6) return (
+        <Shell>
+            <div>
+                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Do you lift?</h2>
+                <p className="text-sm text-stone-400">Strength training significantly changes your protein target.</p>
+            </div>
+            <div className="space-y-3">
+                {[
+                    { val: 'not_yet',   label: 'Not really',         desc: "I'm starting simple." },
+                    { val: 'sometimes', label: 'Sometimes',          desc: 'A few times a month.' },
+                    { val: 'regular',   label: 'Yes, 2+ days/week',  desc: 'This is part of my routine.' },
+                ].map(({ val, label, desc }) => (
+                    <button key={val} onClick={() => set({ strengthTrainingLevel: val })}
+                        className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                            form.strengthTrainingLevel === val
+                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                            : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
+                        }`}>
+                        <span className={`block font-bold text-sm ${form.strengthTrainingLevel === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
+                        <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
+                    </button>
+                ))}
+            </div>
+            <Cta onClick={next} />
+        </Shell>
+    );
+
+    // ── Step 7: Blueprint ────────────────────────────────────────────────────
+    if (step === 7) return (
+        <Shell>
+            <div>
+                <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Your Blueprint</h2>
+                <p className="text-sm text-stone-500">Science-based estimates from your profile. Adjust anytime in Settings.</p>
+            </div>
+            <div className="space-y-3">
+                {[
+                    { icon: Utensils, label: 'Protein',  val: `${calc.proteinTarget}g`, sub: `Range: ${calc.proteinMin}–${calc.proteinMax}g`, card: 'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800', ic: 'text-teal-700 dark:text-teal-300', vc: 'text-violet-900 dark:text-violet-200' },
+                    { icon: Flame,    label: 'Calories', val: `${calc.calories}`,        sub: 'Daily target',                                   card: 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800', ic: 'text-orange-600 dark:text-orange-400', vc: 'text-orange-900 dark:text-orange-200' },
+                    { icon: Droplet,  label: 'Water',    val: `${calc.water}oz`,         sub: 'Half your weight in oz',                         card: 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-100 dark:border-cyan-800',       ic: 'text-cyan-700 dark:text-cyan-400',   vc: 'text-cyan-900 dark:text-cyan-200' },
+                ].map(({ icon: Icon, label, val, sub, card, ic, vc }) => (
+                    <div key={label} className={`p-5 rounded-2xl border ${card} flex items-center justify-between`}>
+                        <div className="flex items-center gap-3">
+                            <Icon size={20} className={ic} />
+                            <div>
+                                <div className="font-bold text-stone-700 dark:text-stone-200 text-sm">{label}</div>
+                                <div className="text-xs text-stone-400">{sub}</div>
+                            </div>
+                        </div>
+                        <div className={`text-2xl font-extrabold ${vc}`}>{val}</div>
+                    </div>
+                ))}
+            </div>
+
+            <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                className="flex items-center justify-center gap-1 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors mx-auto">
+                {isAdvancedOpen ? 'Hide' : 'Override targets'} {isAdvancedOpen ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+            </button>
+
+            {isAdvancedOpen && (
+                <div className="grid grid-cols-3 gap-2 animate-fade-in">
+                    {[
+                        { key: 'manualProtein',  ph: `Pro: ${calc.proteinTarget}` },
+                        { key: 'manualCalories', ph: `Cal: ${calc.calories}` },
+                        { key: 'manualWater',    ph: `H₂O: ${calc.water}` },
+                    ].map(({ key, ph }) => (
+                        <input key={key} type="number" inputMode="numeric" placeholder={ph}
+                            onChange={e => set({ [key]: e.target.value })}
+                            className="p-2 bg-stone-50 dark:bg-stone-800 text-sm rounded-xl text-center border-0 ring-1 ring-stone-100 dark:ring-stone-700 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" />
+                    ))}
+                </div>
+            )}
+
+            <Cta last label="Accept & Start Tracking" onClick={() => {
+                haptic.success();
+                onComplete({
+                    ...form,
+                    targets: {
+                        calories: safeInt(form.manualCalories) || calc.calories,
+                        protein:  safeInt(form.manualProtein)  || calc.proteinTarget,
+                        water:    safeInt(form.manualWater)    || calc.water,
+                    },
+                });
+            }} />
+        </Shell>
+    );
+
+    return null;
 };
 
-const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, showRatio }) => {
+
+const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, showRatio, isOverBudget }) => {
     const t = safeInt(target) || 1;
     const c = safeInt(current);
     const percentage = Math.min(100, Math.max(0, (c / t) * 100));
     const isComplete = percentage >= 100;
-    
+    const overAmount = Math.max(0, c - t);
+
+    // Over-budget overrides normal complete styling for calories
+    const cardBorder = isOverBudget
+        ? 'border-red-200 dark:border-red-800 shadow-md'
+        : isComplete
+        ? 'border-violet-200 dark:border-violet-800 shadow-md animate-pop'
+        : 'border-stone-100 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]';
+
+    const fillColor = isOverBudget
+        ? 'bg-red-400 dark:bg-red-500'
+        : colorClass.fill;
+
     return (
-        <div className={`bg-white dark:bg-stone-900 p-5 rounded-3xl border transition-all duration-500 relative overflow-hidden ${isComplete ? 'border-violet-200 dark:border-violet-800 shadow-md animate-pop' : 'border-stone-100 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]'}`}>
-            {isComplete && (
+        <div className={`bg-white dark:bg-stone-900 p-5 rounded-3xl border transition-all duration-500 relative overflow-hidden ${cardBorder}`}>
+            {isComplete && !isOverBudget && (
                 <div className="absolute top-2 right-2">
                     <Sparkles size={16} className="text-violet-500 animate-confetti" />
                 </div>
             )}
+            {isOverBudget && (
+                <div className="absolute top-2 right-2">
+                    <TrendingUp size={16} className="text-red-400" />
+                </div>
+            )}
             <div className="flex justify-between items-end mb-2 relative z-10">
                 <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-full ${colorClass.bg} ${colorClass.text} dark:bg-opacity-20 ${isComplete ? 'animate-pulse-glow' : ''}`}>
-                        {isComplete ? <Check size={18} /> : <Icon size={18} />}
+                    <div className={`p-2 rounded-full ${isOverBudget ? 'bg-red-50 dark:bg-red-900/30 text-red-500' : `${colorClass.bg} ${colorClass.text} dark:bg-opacity-20`} ${isComplete && !isOverBudget ? 'animate-pulse-glow' : ''}`}>
+                        {isOverBudget ? <TrendingUp size={18} /> : isComplete ? <Check size={18} /> : <Icon size={18} />}
                     </div>
                     <span className="font-medium text-stone-600 dark:text-stone-300">{label}</span>
                 </div>
                 <div className="text-right">
-                    <span className="text-xl font-bold text-stone-800 dark:text-stone-100">{c}</span>
+                    <span className={`text-xl font-bold ${isOverBudget ? 'text-red-500 dark:text-red-400' : 'text-stone-800 dark:text-stone-100'}`}>{c}</span>
                     <span className="text-sm text-stone-400"> / {t}{unit}</span>
                 </div>
             </div>
             <div className="h-3 bg-stone-100 dark:bg-stone-800 rounded-full w-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-1000 ease-out ${colorClass.fill} ${isComplete ? 'brightness-110' : ''}`} style={{ width: `${percentage}%` }}/>
+                <div className={`h-full rounded-full transition-all duration-1000 ease-out ${fillColor}`} style={{ width: `${percentage}%` }}/>
             </div>
             <div className="mt-2 text-xs text-stone-400 text-right font-medium flex justify-between items-center">
                 {showRatio && c > 0 && (
@@ -1171,7 +1345,12 @@ const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, sho
                     </span>
                 )}
                 <span className="ml-auto">
-                    {isComplete ? <span className="text-violet-600 dark:text-violet-300 font-bold">Goal Reached!</span> : `${Math.round(100 - percentage)}% to go`}
+                    {isOverBudget
+                        ? <span className="text-red-500 dark:text-red-400 font-bold">+{overAmount} over</span>
+                        : isComplete
+                        ? <span className="text-violet-600 dark:text-violet-300 font-bold">Goal Reached!</span>
+                        : `${Math.round(100 - percentage)}% to go`
+                    }
                 </span>
             </div>
         </div>
@@ -1367,7 +1546,7 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
     );
 };
 
-const FoodLogList = ({ items, onDelete, onEdit }) => {
+const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
     const list = items || [];
     if (list.length === 0) return null;
     
@@ -1403,27 +1582,56 @@ const FoodLogList = ({ items, onDelete, onEdit }) => {
                             </div>
                             <div className="space-y-2">
                                 {periodItems.map((item) => (
-                                    <div key={item.originalIndex} className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm flex justify-between items-start group">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-stone-700 dark:text-stone-200">{item.name}</span>
-                                                {item.loggedAt && (
-                                                    <span className="text-[10px] text-stone-400">{formatTime(item.loggedAt)}</span>
-                                                )}
+                                    <div key={item.originalIndex} className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-bold text-stone-700 dark:text-stone-200">{item.name}</span>
+                                                    {item.loggedAt && (
+                                                        <span className="text-[10px] text-stone-400">{formatTime(item.loggedAt)}</span>
+                                                    )}
+                                                    {item.servings && item.servings !== 1 && (
+                                                        <span className="text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded-md">×{item.servings}</span>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-stone-500 mt-1 flex gap-2 flex-wrap">
+                                                    {item.protein > 0 && <span className="bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-lg font-medium">{item.protein}g Pro</span>}
+                                                    {item.calories > 0 && <span className="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-lg font-medium">{item.calories} Cal</span>}
+                                                </div>
                                             </div>
-                                            <div className="text-xs text-stone-500 mt-1 flex gap-2 flex-wrap">
-                                                {item.protein > 0 && <span className="bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-lg font-medium">{item.protein}g Pro</span>}
-                                                {item.calories > 0 && <span className="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-lg font-medium">{item.calories} Cal</span>}
+                                            <div className="flex gap-1 ml-2 shrink-0">
+                                                <button onClick={() => onEdit(item.originalIndex)} className="p-2 text-stone-300 hover:text-indigo-500 rounded-lg transition-colors active:scale-90">
+                                                    <Edit3 size={15} />
+                                                </button>
+                                                <button onClick={() => onDelete(item.originalIndex)} className="p-2 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90">
+                                                    <X size={15} />
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            {/* Updated: Edit Button */}
-                                            <button onClick={() => onEdit(item.originalIndex)} className="p-2 text-stone-300 hover:text-indigo-500 rounded-lg transition-colors active:scale-90">
-                                                <Edit3 size={16} />
-                                            </button>
-                                            <button onClick={() => onDelete(item.originalIndex)} className="p-2 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90">
-                                                <X size={16} />
-                                            </button>
+                                        {/* Serving multiplier row */}
+                                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-50 dark:border-stone-800">
+                                            <span className="text-[10px] text-stone-400 uppercase tracking-wider font-medium shrink-0">Servings</span>
+                                            <div className="flex items-center gap-1">
+                                                {[0.5, 1, 1.5, 2].map(mult => {
+                                                    const baseProtein  = item.baseProtein  ?? item.protein;
+                                                    const baseCalories = item.baseCalories ?? item.calories;
+                                                    const currentServings = item.servings ?? 1;
+                                                    const isActive = Math.abs(currentServings - mult) < 0.01;
+                                                    return (
+                                                        <button
+                                                            key={mult}
+                                                            onClick={() => { haptic.light(); onMultiply(item.originalIndex, mult, baseProtein, baseCalories); }}
+                                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-90 ${
+                                                                isActive
+                                                                ? 'bg-stone-800 dark:bg-stone-600 text-white'
+                                                                : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700'
+                                                            }`}
+                                                        >
+                                                            {mult === 0.5 ? '½' : mult === 1 ? '1×' : mult === 1.5 ? '1½' : '2×'}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -1436,17 +1644,52 @@ const FoodLogList = ({ items, onDelete, onEdit }) => {
     );
 };
 
-const EmptyState = ({ onAddClick, suggestions }) => {
+const EmptyState = ({ onAddClick, suggestions, onGoLearn }) => {
+    // Pick a deterministic "food of the day" based on calendar date
+    const todayIndex = new Date().getDate() % FOOD_LIBRARY.length;
+    const featuredFood = FOOD_LIBRARY[todayIndex];
+    const efficiency = (featuredFood.protein / featuredFood.calories * 100).toFixed(1);
+
     return (
-        <div className="text-center py-8 animate-fade-in">
-            <div className="w-16 h-16 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Utensils size={28} className="text-stone-400" />
+        <div className="space-y-4 animate-fade-in">
+            {/* Food of the day — bridges empty state to the Learn tab */}
+            <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden">
+                <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Sparkles size={14} className="text-violet-500" />
+                        <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Protein Pick of the Day</span>
+                    </div>
+                    <button
+                        onClick={onGoLearn}
+                        className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+                    >
+                        See all →
+                    </button>
+                </div>
+                <div className="px-4 pb-4">
+                    <div className="flex items-center justify-between p-3 bg-violet-50 dark:bg-violet-900/20 rounded-2xl">
+                        <div>
+                            <div className="font-bold text-stone-800 dark:text-stone-100 text-sm">{featuredFood.name}</div>
+                            <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 flex items-center gap-2">
+                                <span>≈ {featuredFood.portion}</span>
+                                <span className="bg-white dark:bg-stone-800 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded font-medium">{efficiency}g pro/100cal</span>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="font-bold text-violet-700 dark:text-violet-300 text-lg">{featuredFood.protein}g</div>
+                            <div className="text-xs text-stone-400">{featuredFood.calories} cal</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <h3 className="text-lg font-bold text-stone-700 dark:text-stone-200 mb-2">Nothing logged yet</h3>
-            <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">Start tracking to see your progress</p>
-            
-            <div className="space-y-2">
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Quick start:</p>
+
+            {/* Quick-add suggestions */}
+            <div className="text-center py-4">
+                <div className="w-14 h-14 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Utensils size={24} className="text-stone-400" />
+                </div>
+                <h3 className="text-base font-bold text-stone-700 dark:text-stone-200 mb-1">Nothing logged yet</h3>
+                <p className="text-sm text-stone-400 mb-4">Tap below to add your first meal</p>
                 <div className="flex flex-wrap justify-center gap-2">
                     {suggestions.slice(0, 3).map((food, idx) => (
                         <button
@@ -1459,6 +1702,23 @@ const EmptyState = ({ onAddClick, suggestions }) => {
                     ))}
                 </div>
             </div>
+
+            {/* Learn tab entry point */}
+            <button
+                onClick={onGoLearn}
+                className="w-full p-4 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 rounded-2xl flex items-center justify-between group active:scale-[0.98] transition-transform"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white dark:bg-stone-800 rounded-xl text-cyan-700 dark:text-cyan-300">
+                        <BookOpen size={18} />
+                    </div>
+                    <div className="text-left">
+                        <div className="font-bold text-stone-800 dark:text-stone-100 text-sm">Not sure what to log?</div>
+                        <div className="text-xs text-stone-500 dark:text-stone-400">Browse the food guide & fast food cheat sheet</div>
+                    </div>
+                </div>
+                <ChevronRight size={18} className="text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors shrink-0" />
+            </button>
         </div>
     );
 };
@@ -1941,8 +2201,9 @@ const Steady = () => {
             setEditingItem(null);
             setToast({ message: `Updated ${food.name.split(' (')[0]}`, type: 'success' });
         } else {
-            // Logic for Adding New
-            const newItems = [...(logs?.items || []), food];
+            // Logic for Adding New — stamp base values for serving multiplier
+            const newFood = { ...food, servings: 1, baseProtein: safeInt(food.protein), baseCalories: safeInt(food.calories) };
+            const newItems = [...(logs?.items || []), newFood];
             updateLog({ items: newItems });
             trackEvent('food_logged', {
                 calories: safeNum(food.calories),
@@ -1966,9 +2227,23 @@ const Steady = () => {
         setShowAddModal(true);
     }, [logs]);
 
+    const handleMultiply = useCallback((index, multiplier, baseProtein, baseCalories) => {
+        const newItems = [...logs.items];
+        const item = newItems[index];
+        newItems[index] = {
+            ...item,
+            servings: multiplier,
+            baseProtein:  baseProtein,
+            baseCalories: baseCalories,
+            protein:  Math.round(baseProtein  * multiplier),
+            calories: Math.round(baseCalories * multiplier),
+        };
+        updateLog({ items: newItems });
+    }, [logs, updateLog]);
+
     const handleQuickAdd = useCallback((food) => {
         // Quick add always adds new, never edits
-        const newFood = { ...food, loggedAt: Date.now() };
+        const newFood = { ...food, loggedAt: Date.now(), servings: 1, baseProtein: safeInt(food.protein), baseCalories: safeInt(food.calories) };
         // We manually call the add logic here instead of handleAdd to avoid edit state confusion
         const newItems = [...(logs?.items || []), newFood];
         updateLog({ items: newItems });
@@ -2083,8 +2358,9 @@ const Steady = () => {
         water: safeInt(profile.targets?.water) || 100 
     };
     
-    const proteinRemaining = Math.max(0, targets.protein - totals.protein);
+    const proteinRemaining  = Math.max(0, targets.protein  - totals.protein);
     const caloriesRemaining = Math.max(0, targets.calories - totals.calories);
+    const caloriesOver      = Math.max(0, totals.calories  - targets.calories);
 
     return (
         <div className="fixed inset-0 flex flex-col bg-[#FDFBF7] dark:bg-stone-950">
@@ -2131,6 +2407,7 @@ const Steady = () => {
                                     <InsightCard 
                                         proteinRemaining={proteinRemaining} 
                                         caloriesRemaining={caloriesRemaining}
+                                        caloriesOver={caloriesOver}
                                         proteinTarget={targets.protein}
                                     />
                                 )}
@@ -2164,6 +2441,7 @@ const Steady = () => {
                                             unit="" 
                                             icon={Flame} 
                                             colorClass={{ bg: 'bg-orange-50 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300', fill: 'bg-orange-500' }} 
+                                            isOverBudget={caloriesOver > 0}
                                         />
                                     </div>
                                     <div className="col-span-2 bg-white dark:bg-stone-900 p-5 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -2182,12 +2460,15 @@ const Steady = () => {
                                         <div className="h-3 bg-stone-100 dark:bg-stone-800 rounded-full w-full overflow-hidden mb-4">
                                             <div className="h-full rounded-full transition-all duration-1000 ease-out bg-cyan-500" style={{ width: `${Math.min(100, ((logs.water || 0) / targets.water) * 100)}%` }}/>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => handleWater(8)} className="flex-1 py-3 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-2xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95">+8oz</button>
-                                            <button onClick={() => handleWater(16)} className="flex-1 py-3 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-2xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95">+16oz</button>
-                                            <button onClick={() => handleWater(-8)} className="w-12 py-3 bg-stone-50 dark:bg-stone-800 text-stone-400 font-bold rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors flex items-center justify-center active:scale-95">
-                                                <Minus size={16}/>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handleWater(-8)} className="w-11 h-11 bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors flex items-center justify-center active:scale-90 shrink-0">
+                                                <Minus size={18}/>
                                             </button>
+                                            <div className="flex-1 flex gap-2">
+                                                <button onClick={() => handleWater(8)} className="flex-1 py-2.5 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95 text-sm">+8oz</button>
+                                                <button onClick={() => handleWater(16)} className="flex-1 py-2.5 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95 text-sm">+16oz</button>
+                                                <button onClick={() => handleWater(32)} className="flex-1 py-2.5 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors active:scale-95 text-sm">+32oz</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2197,11 +2478,12 @@ const Steady = () => {
                                 
                                 {/* Food Log or Empty State */}
                                 {logs.items && logs.items.length > 0 ? (
-                                    <FoodLogList items={logs.items} onDelete={handleDelete} onEdit={handleEditClick} />
+                                    <FoodLogList items={logs.items} onDelete={handleDelete} onEdit={handleEditClick} onMultiply={handleMultiply} />
                                 ) : (
                                     <EmptyState 
                                         onAddClick={handleQuickAdd}
                                         suggestions={FOOD_LIBRARY.filter(f => f.protein >= 15).slice(0, 3)}
+                                        onGoLearn={() => setView('learn')}
                                     />
                                 )}
                             </div>
@@ -2270,3 +2552,8 @@ const Steady = () => {
 // Mount the app
 const root = createRoot(document.getElementById('root'));
 root.render(<Steady />);
+
+// Tell index.html the app has mounted — dismisses the loading screen
+if (typeof window.__steadyReady === 'function') {
+    setTimeout(window.__steadyReady, 150);
+}

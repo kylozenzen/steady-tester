@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Steady</title>
 
-    <!-- PWA + theme colors -->
     <meta name="theme-color" content="#EAF4FF" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,27 +14,24 @@
 
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="icons/steady-icon-32.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/steady-icon-32.png">
-    <link rel="icon" type="image/png" sizes="64x64" href="icons/steady-icon-64.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="icons/steady-icon-96.png">
+    <link rel="icon" type="image/png" sizes="32x32"  href="icons/steady-icon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64"  href="icons/steady-icon-64.png">
+    <link rel="icon" type="image/png" sizes="96x96"  href="icons/steady-icon-96.png">
     <link rel="icon" type="image/png" sizes="128x128" href="icons/steady-icon-128.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/steady-icon-192.png">
     <link rel="apple-touch-icon" sizes="192x192" href="icons/steady-icon-192.png">
     <link rel="manifest" href="manifest.webmanifest">
 
-    <!-- Google tag (gtag.js) -->
+    <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XER9SVKX9B"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-XER9SVKX9B');
     </script>
 
-    <!-- App styles -->
     <link rel="stylesheet" href="style.css">
-
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -69,51 +65,238 @@
     </script>
     <script src="https://unpkg.com/@babel/standalone@7.23.9/babel.min.js"></script>
 
-</head>
-<body class="bg-[#FDFBF7] dark:bg-stone-950 transition-colors duration-300">
-    <div class="steady-app-shell">
-        <div id="root">
-            <!-- Initial loading shell while React + JS load, also shows when offline -->
-            <div class="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-stone-950 gap-4">
-                <div class="w-40 h-4 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
-                    <div class="h-full w-3/4 bg-violet-500 rounded-full animate-pulse"></div>
-                </div>
-                <p class="text-stone-700 dark:text-stone-300 text-sm tracking-wide">
-                    Balancing your day…
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bootstrapping Steady: compile JSX with Babel, then run as an ES module -->
-<script type="module">
-  (async () => {
-    try {
-      // 1. Load the original source (with JSX + imports)
-      const response = await fetch('script.js');
-      if (!response.ok) {
-        throw new Error(`Failed to load script.js: ${response.status}`);
+    <style>
+      /* ── Loading screen — inline so it renders before any external CSS ── */
+      #steady-loader {
+        position: fixed; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        background: #FDFBF7;
+        z-index: 9999;
+        transition: opacity 0.45s ease, transform 0.45s ease;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
       }
-      const source = await response.text();
+      @media (prefers-color-scheme: dark) {
+        #steady-loader { background: #0c0a09; }
+        #loader-wordmark { color: #f5f5f4; }
+        #loader-tagline  { color: #78716c; }
+        .ldr-track       { background: #292524 !important; }
+      }
+      #steady-loader.fade-out {
+        opacity: 0; transform: scale(1.02); pointer-events: none;
+      }
 
-      // 2. Use Babel to compile ONLY JSX, keep ES modules intact
-      const { code } = Babel.transform(source, {
-        presets: ['react'],
-        sourceType: 'module',
-        filename: 'script.js',
+      /* Icon */
+      #loader-icon {
+        width: 72px; height: 72px; border-radius: 22px;
+        background: linear-gradient(135deg, #7c3aed 0%, #14b8a6 100%);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 40px rgba(124,58,237,0.3);
+        animation: ldr-breathe 2.4s ease-in-out infinite;
+      }
+      @keyframes ldr-breathe {
+        0%,100% { transform: scale(1);    box-shadow: 0 12px 40px rgba(124,58,237,0.25); }
+        50%     { transform: scale(1.05); box-shadow: 0 16px 48px rgba(124,58,237,0.42); }
+      }
+
+      /* Wordmark */
+      #loader-wordmark {
+        font-size: 1.75rem; font-weight: 800;
+        color: #1c1917; letter-spacing: -0.03em; line-height: 1;
+        margin-bottom: 6px;
+      }
+      #loader-tagline {
+        font-size: 0.72rem; color: #a8a29e;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        margin-bottom: 36px;
+      }
+
+      /* Progress bar */
+      .ldr-track {
+        width: 140px; height: 3px;
+        background: #e7e5e4; border-radius: 99px; overflow: hidden;
+      }
+      .ldr-fill {
+        height: 100%; border-radius: 99px;
+        background: linear-gradient(90deg, #7c3aed, #14b8a6);
+        animation: ldr-sweep 2.2s ease-in-out infinite;
+      }
+      @keyframes ldr-sweep {
+        0%   { width: 0%;   margin-left: 0%; opacity: 1; }
+        60%  { width: 70%;  margin-left: 15%; opacity: 1; }
+        90%  { width: 20%;  margin-left: 80%; opacity: 0.6; }
+        100% { width: 0%;   margin-left: 100%; opacity: 0; }
+      }
+
+      /* Error state */
+      #loader-error {
+        display: none; margin-top: 28px; padding: 18px 22px;
+        background: #fef2f2; border: 1px solid #fecaca; border-radius: 14px;
+        max-width: 300px; text-align: center;
+      }
+      @media (prefers-color-scheme: dark) {
+        #loader-error { background: #3f0000; border-color: #7f1d1d; }
+        #loader-error p { color: #fca5a5 !important; }
+      }
+      #loader-error p {
+        font-size: 0.82rem; color: #dc2626;
+        margin: 0 0 14px; line-height: 1.55;
+      }
+      #loader-error button {
+        padding: 9px 22px; background: #1c1917; color: #fff;
+        border: none; border-radius: 9px; font-size: 0.82rem;
+        font-weight: 700; cursor: pointer;
+      }
+
+      /* Update-available banner */
+      #update-banner {
+        display: none;
+        position: fixed; bottom: 80px; left: 12px; right: 12px;
+        max-width: 480px; margin: 0 auto;
+        background: #1c1917; color: #fff;
+        padding: 13px 16px; border-radius: 16px;
+        z-index: 8000; box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+        align-items: center; justify-content: space-between; gap: 12px;
+        font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.85rem;
+      }
+      #update-banner span { flex: 1; }
+      #update-banner button {
+        background: #7c3aed; color: #fff; border: none;
+        border-radius: 9px; padding: 7px 14px;
+        font-weight: 700; font-size: 0.8rem; cursor: pointer;
+        white-space: nowrap; flex-shrink: 0;
+      }
+    </style>
+</head>
+
+<body class="bg-[#FDFBF7] dark:bg-stone-950 transition-colors duration-300">
+
+  <!-- ── Branded loading screen ───────────────────────────────────────────── -->
+  <div id="steady-loader">
+    <div id="loader-icon">
+      <!-- Bar chart icon — matches app icon -->
+      <svg width="36" height="30" viewBox="0 0 36 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- baseline -->
+        <line x1="2" y1="28" x2="34" y2="28" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-linecap="round"/>
+        <!-- bar 1: lavender -->
+        <rect x="3" y="14" width="8" height="14" rx="2" fill="#a082fa" opacity="0.85"/>
+        <!-- bar 2: violet -->
+        <rect x="14" y="8" width="8" height="20" rx="2" fill="#7c3aed"/>
+        <!-- bar 3: teal — overshoots the line -->
+        <rect x="25" y="2" width="8" height="26" rx="2" fill="#14b8a6"/>
+        <!-- dashed goal line — bar 3 clears it -->
+        <line x1="2" y1="9" x2="12" y2="9" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2.5 1.5"/>
+        <line x1="14" y1="9" x2="24" y2="9" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2.5 1.5"/>
+      </svg>
+    </div>
+    <div id="loader-wordmark">Steady</div>
+    <div id="loader-tagline">Balancing your day</div>
+    <div class="ldr-track"><div class="ldr-fill"></div></div>
+    <div id="loader-error">
+      <p id="loader-error-msg">Something went wrong loading Steady.</p>
+      <button onclick="location.reload()">Try Again</button>
+    </div>
+  </div>
+
+  <!-- ── Update-available banner ──────────────────────────────────────────── -->
+  <div id="update-banner">
+    <span>✨ A new version of Steady is ready.</span>
+    <button onclick="window.location.reload()">Update Now</button>
+  </div>
+
+  <div class="steady-app-shell">
+    <div id="root"></div>
+  </div>
+
+  <script type="module">
+    // ── Helpers ────────────────────────────────────────────────────────────
+    const loader    = document.getElementById('steady-loader');
+    const errBox    = document.getElementById('loader-error');
+    const errMsg    = document.getElementById('loader-error-msg');
+    const banner    = document.getElementById('update-banner');
+
+    const hideLoader = () => {
+      if (!loader || loader.classList.contains('fade-out')) return;
+      loader.classList.add('fade-out');
+      setTimeout(() => { loader.style.display = 'none'; }, 460);
+    };
+
+    const showError = (msg) => {
+      if (errBox) { errMsg.textContent = msg; errBox.style.display = 'block'; }
+    };
+
+    // React calls this once the app has painted its first frame
+    window.__steadyReady = hideLoader;
+
+    // ── Service Worker ─────────────────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const reg = await navigator.serviceWorker.register('/sw.js');
+
+          const showBanner = () => { if (banner) banner.style.display = 'flex'; };
+
+          // Already waiting from a previous load
+          if (reg.waiting) showBanner();
+
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            nw?.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) showBanner();
+            });
+          });
+
+          // When new SW takes over, do a single silent reload
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) { refreshing = true; window.location.reload(); }
+          });
+        } catch (e) {
+          console.warn('[Steady] SW registration failed (app works fine without it):', e);
+        }
       });
-
-      // 3. Turn the compiled code into a blob URL and import it as a module
-      const blob = new Blob([code], { type: 'text/javascript' });
-      const moduleUrl = URL.createObjectURL(blob);
-
-      await import(moduleUrl);
-    } catch (error) {
-      console.error('Steady boot error:', error);
     }
-  })();
-</script>
 
+    // ── Boot Steady ────────────────────────────────────────────────────────
+    try {
+      // Netlify build rewrites this fetch path to 'script.dist.js' (pre-compiled).
+      // In dev / GitHub Pages, Babel compiles it at runtime below.
+      const res = await fetch('script.js');
+      if (!res.ok) throw new Error(`Could not load script.js (HTTP ${res.status}). Are you offline?`);
+
+      const source = await res.text();
+
+      // Try Babel transform — surface human-readable errors if JSX is broken
+      let compiled;
+      try {
+        const result = Babel.transform(source, {
+          presets: ['react'],
+          sourceType: 'module',
+          filename: 'script.js',
+        });
+        compiled = result.code;
+      } catch (babelErr) {
+        // Extract line number from Babel's message if possible
+        const loc = babelErr.message.match(/\((\d+):(\d+)\)/);
+        const hint = loc ? ` (line ${loc[1]}, col ${loc[2]})` : '';
+        throw new Error(
+          `JSX syntax error in script.js${hint}.\n\n` +
+          `Fix the broken JSX then redeploy. Full error:\n${babelErr.message}`
+        );
+      }
+
+      const blob = new Blob([compiled], { type: 'text/javascript' });
+      await import(URL.createObjectURL(blob));
+
+      // Fallback: if React didn't call __steadyReady, hide loader after grace period
+      setTimeout(hideLoader, 900);
+
+    } catch (err) {
+      console.error('[Steady] Boot error:', err);
+      showError(err.message || 'Could not start Steady. Check your connection and try again.');
+    }
+  </script>
 
 </body>
 </html>
