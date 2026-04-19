@@ -2117,7 +2117,7 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
     );
 };
 
-const EmptyState = ({ onAddClick, suggestions, onGoLearn, yesterdayItems, onCopyYesterday }) => {
+const EmptyState = ({ onGoLearn, yesterdayItems, onCopyYesterday }) => {
     const todayIndex = new Date().getDate() % FOOD_LIBRARY.length;
     const featuredFood = FOOD_LIBRARY[todayIndex];
     const efficiency = (featuredFood.protein / featuredFood.calories * 100).toFixed(1);
@@ -2165,16 +2165,6 @@ const EmptyState = ({ onAddClick, suggestions, onGoLearn, yesterdayItems, onCopy
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* Quick-add pills */}
-            <div className="flex flex-wrap gap-2">
-                {suggestions.slice(0, 3).map((food, idx) => (
-                    <button key={idx} onClick={() => onAddClick(food)}
-                        className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-600 dark:text-stone-300 hover:border-violet-300 dark:hover:border-violet-700 transition-colors active:scale-95">
-                        {food.name.split(' (')[0]} <span className="text-violet-600 dark:text-violet-300">+{food.protein}g</span>
-                    </button>
-                ))}
             </div>
 
             {/* Learn link */}
@@ -2745,7 +2735,7 @@ const Steady = () => {
                 
                 {/* Header */}
                 <header className="flex-none bg-white dark:bg-stone-900 px-6 pt-4 pb-4 border-b border-stone-100 dark:border-stone-800 z-10">
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl font-bold text-stone-800 dark:text-stone-100">Steady</h1>
                             {profile.currentStreak > 0 && (
@@ -2758,6 +2748,16 @@ const Steady = () => {
                             <Settings size={20}/>
                         </button>
                     </div>
+                    {view === 'dashboard' && (() => {
+                        const hour = new Date().getHours();
+                        const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+                        const sub = hour < 12 ? "Let's start strong." : hour < 17 ? 'How\'s the day going?' : 'Wind it down well.';
+                        return (
+                            <div className="mb-3">
+                                <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">{greeting}{profile.currentWeight ? '' : ''}. <span className="text-stone-400 dark:text-stone-500 font-normal">{sub}</span></p>
+                            </div>
+                        );
+                    })()}
                     {view === 'dashboard' && (
                         <div className="flex items-center justify-between bg-stone-50 dark:bg-stone-800 p-1 rounded-xl">
                             <button onClick={() => changeDate(-1)} className="p-2 text-stone-400 hover:bg-white dark:hover:bg-stone-700 rounded-lg active:scale-90 transition-transform">
@@ -2893,8 +2893,6 @@ const Steady = () => {
                                     </>
                                 ) : (
                                     <EmptyState
-                                        onAddClick={handleQuickAdd}
-                                        suggestions={FOOD_LIBRARY.filter(f => f.protein >= 15).slice(0, 3)}
                                         onGoLearn={() => setView('learn')}
                                         yesterdayItems={selectedDate === getTodayStr() ? yesterdayItems : []}
                                         onCopyYesterday={handleCopyYesterday}
