@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from ‘react’;
-import { createRoot } from ‘react-dom/client’;
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createRoot } from 'react-dom/client';
 import {
 Droplet, Flame, ChevronDown, ChevronUp, Info, BarChart3, BookOpen,
 Plus, Minus, Utensils, LayoutDashboard, Target, ArrowRight, Scale,
@@ -8,7 +8,7 @@ Settings, Save, LogOut, Leaf, ChevronLeft, ChevronRight, Calendar,
 Moon, Sun, Download, Upload, Lightbulb, Edit3, TrendingUp, Heart, Coffee,
 Undo2, Copy, Zap, Clock, Sunrise, CloudSun, Sunset, MoonStar, Sparkles,
 AlertCircle, RefreshCw, Store, ChefHat, Trash2
-} from ‘lucide-react’;
+} from 'lucide-react';
 
 const __ga = {
 started: false,
@@ -18,18 +18,18 @@ endedSent: false
 
 function trackEvent(name, params = {}) {
 try {
-if (typeof window.gtag === ‘function’) {
-window.gtag(‘event’, name, params);
+if (typeof window.gtag === 'function') {
+window.gtag('event', name, params);
 }
 } catch (e) {}
 }
 
-if (‘serviceWorker’ in navigator) {
-window.addEventListener(‘load’, () => {
+if ('serviceWorker' in navigator) {
+window.addEventListener('load', () => {
 navigator.serviceWorker
-.register(’/sw.js’)
+.register('/sw.js')
 .catch((err) => {
-console.error(‘Service worker registration failed:’, err);
+console.error('Service worker registration failed:', err);
 });
 });
 }
@@ -48,57 +48,57 @@ error: () => navigator.vibrate?.([50, 30, 50])
 
 // — LOCAL STORAGE ENGINE —
 const DB = {
-getProfile: () => JSON.parse(localStorage.getItem(‘steady_profile’) || ‘null’),
-saveProfile: (data) => localStorage.setItem(‘steady_profile’, JSON.stringify(data)),
-getLog: (date) => JSON.parse(localStorage.getItem(`steady_logs_${date}`) || ‘null’),
+getProfile: () => JSON.parse(localStorage.getItem('steady_profile') || 'null'),
+saveProfile: (data) => localStorage.setItem('steady_profile', JSON.stringify(data)),
+getLog: (date) => JSON.parse(localStorage.getItem(`steady_logs_${date}`) || 'null'),
 saveLog: (date, data) => localStorage.setItem(`steady_logs_${date}`, JSON.stringify(data)),
-getWeightHistory: () => JSON.parse(localStorage.getItem(‘steady_weight_history’) || ‘[]’),
+getWeightHistory: () => JSON.parse(localStorage.getItem('steady_weight_history') || '[]'),
 saveWeightLog: (log) => {
 const history = DB.getWeightHistory();
 const filtered = history.filter(h => h.date !== log.date);
 filtered.push(log);
-localStorage.setItem(‘steady_weight_history’, JSON.stringify(filtered));
+localStorage.setItem('steady_weight_history', JSON.stringify(filtered));
 },
-getRecentFoods: () => JSON.parse(localStorage.getItem(‘steady_recent_foods’) || ‘[]’),
+getRecentFoods: () => JSON.parse(localStorage.getItem('steady_recent_foods') || '[]'),
 addRecentFood: (food) => {
 let recent = DB.getRecentFoods();
 recent = recent.filter(f => f.name.toLowerCase() !== food.name.toLowerCase());
-recent.unshift({ …food, lastUsed: Date.now() });
-localStorage.setItem(‘steady_recent_foods’, JSON.stringify(recent.slice(0, 50)));
+recent.unshift({ ...food, lastUsed: Date.now() });
+localStorage.setItem('steady_recent_foods', JSON.stringify(recent.slice(0, 50)));
 },
 updateRecentFood: (oldName, patch) => {
 let recent = DB.getRecentFoods();
 const idx = recent.findIndex(f => f.name.toLowerCase() === oldName.toLowerCase());
-if (idx !== -1) { recent[idx] = { …recent[idx], …patch }; }
-localStorage.setItem(‘steady_recent_foods’, JSON.stringify(recent));
+if (idx !== -1) { recent[idx] = { ...recent[idx], ...patch }; }
+localStorage.setItem('steady_recent_foods', JSON.stringify(recent));
 },
 deleteRecentFood: (name) => {
 const recent = DB.getRecentFoods().filter(f => f.name.toLowerCase() !== name.toLowerCase());
-localStorage.setItem(‘steady_recent_foods’, JSON.stringify(recent));
+localStorage.setItem('steady_recent_foods', JSON.stringify(recent));
 },
 getAllLogs: () => {
 const logs = {};
 for (let i = 0; i < localStorage.length; i++) {
 const key = localStorage.key(i);
-if (key && key.startsWith(‘steady_logs_’)) {
-const date = key.replace(‘steady_logs_’, ‘’);
+if (key && key.startsWith('steady_logs_')) {
+const date = key.replace('steady_logs_', '');
 logs[date] = JSON.parse(localStorage.getItem(key));
 }
 }
 return logs;
 },
 // ── MEALS ──────────────────────────────────────────────────────────────
-getMeals: () => JSON.parse(localStorage.getItem(‘steady_meals’) || ‘[]’),
-saveMeals: (meals) => localStorage.setItem(‘steady_meals’, JSON.stringify(meals)),
+getMeals: () => JSON.parse(localStorage.getItem('steady_meals') || '[]'),
+saveMeals: (meals) => localStorage.setItem('steady_meals', JSON.stringify(meals)),
 addMeal: (meal) => {
 const meals = DB.getMeals();
-const newMeal = { …meal, id: `meal_${Date.now()}`, createdAt: Date.now() };
+const newMeal = { ...meal, id: `meal_${Date.now()}`, createdAt: Date.now() };
 meals.push(newMeal);
 DB.saveMeals(meals);
 return newMeal;
 },
 updateMeal: (id, patch) => {
-const meals = DB.getMeals().map(m => m.id === id ? { …m, …patch } : m);
+const meals = DB.getMeals().map(m => m.id === id ? { ...m, ...patch } : m);
 DB.saveMeals(meals);
 },
 deleteMeal: (id) => {
@@ -112,7 +112,7 @@ window.location.reload();
 exportData: () => {
 const data = {
 exportDate: new Date().toISOString(),
-version: ‘2.0’,
+version: '2.0',
 profile: DB.getProfile(),
 weightHistory: DB.getWeightHistory(),
 recentFoods: DB.getRecentFoods(),
@@ -123,9 +123,9 @@ return data;
 },
 downloadExport: () => {
 const data = DB.exportData();
-const blob = new Blob([JSON.stringify(data, null, 2)], { type: ‘application/json’ });
+const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 const url = URL.createObjectURL(blob);
-const a = document.createElement(‘a’);
+const a = document.createElement('a');
 a.href = url;
 a.download = `steady-backup-${getTodayStr()}.json`;
 document.body.appendChild(a);
@@ -135,33 +135,33 @@ URL.revokeObjectURL(url);
 },
 importData: (jsonData) => {
 try {
-const data = typeof jsonData === ‘string’ ? JSON.parse(jsonData) : jsonData;
-if (!data.profile) throw new Error(‘Invalid backup file: missing profile data’);
+const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+if (!data.profile) throw new Error('Invalid backup file: missing profile data');
 const keysToRemove = [];
 for (let i = 0; i < localStorage.length; i++) {
 const key = localStorage.key(i);
-if (key && key.startsWith(‘steady_’)) keysToRemove.push(key);
+if (key && key.startsWith('steady_')) keysToRemove.push(key);
 }
 keysToRemove.forEach(key => localStorage.removeItem(key));
-if (data.profile) localStorage.setItem(‘steady_profile’, JSON.stringify(data.profile));
-if (data.weightHistory) localStorage.setItem(‘steady_weight_history’, JSON.stringify(data.weightHistory));
-if (data.recentFoods) localStorage.setItem(‘steady_recent_foods’, JSON.stringify(data.recentFoods));
-if (data.meals) localStorage.setItem(‘steady_meals’, JSON.stringify(data.meals));
+if (data.profile) localStorage.setItem('steady_profile', JSON.stringify(data.profile));
+if (data.weightHistory) localStorage.setItem('steady_weight_history', JSON.stringify(data.weightHistory));
+if (data.recentFoods) localStorage.setItem('steady_recent_foods', JSON.stringify(data.recentFoods));
+if (data.meals) localStorage.setItem('steady_meals', JSON.stringify(data.meals));
 if (data.logs) {
 Object.entries(data.logs).forEach(([date, log]) => {
 localStorage.setItem(`steady_logs_${date}`, JSON.stringify(log));
 });
 }
-return { success: true, message: ‘Data imported successfully!’ };
+return { success: true, message: 'Data imported successfully!' };
 } catch (error) {
-return { success: false, message: error.message || ‘Failed to import data’ };
+return { success: false, message: error.message || 'Failed to import data' };
 }
 }
 };
 
 // — UTILS —
 const safeInt = (val) => {
-if (val === undefined || val === null || val === ‘’) return 0;
+if (val === undefined || val === null || val === '') return 0;
 const num = parseInt(val, 10);
 return isNaN(num) ? 0 : num;
 };
@@ -169,58 +169,58 @@ return isNaN(num) ? 0 : num;
 const getTodayStr = () => {
 const now = new Date();
 const offset = now.getTimezoneOffset() * 60000;
-return new Date(now.getTime() - offset).toISOString().split(‘T’)[0];
+return new Date(now.getTime() - offset).toISOString().split('T')[0];
 };
 
 const getYesterdayStr = () => {
 const now = new Date();
 now.setDate(now.getDate() - 1);
 const offset = now.getTimezoneOffset() * 60000;
-return new Date(now.getTime() - offset).toISOString().split(‘T’)[0];
+return new Date(now.getTime() - offset).toISOString().split('T')[0];
 };
 
 const formatDateDisplay = (dateStr) => {
-const dateParts = dateStr.split(’-’);
+const dateParts = dateStr.split('-');
 const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
 const today = new Date();
 today.setHours(0,0,0,0);
 const yesterday = new Date(today);
 yesterday.setDate(today.getDate() - 1);
-if (date.getTime() === today.getTime()) return ‘Today’;
-if (date.getTime() === yesterday.getTime()) return ‘Yesterday’;
-return date.toLocaleDateString(‘en-US’, { weekday: ‘short’, month: ‘short’, day: ‘numeric’ });
+if (date.getTime() === today.getTime()) return 'Today';
+if (date.getTime() === yesterday.getTime()) return 'Yesterday';
+return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
 const formatTime = (timestamp) => {
-if (!timestamp) return ‘’;
+if (!timestamp) return '';
 const date = new Date(timestamp);
-return date.toLocaleTimeString(‘en-US’, { hour: ‘numeric’, minute: ‘2-digit’, hour12: true });
+return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 };
 
 const getMealPeriod = (timestamp) => {
-if (!timestamp) return ‘snack’;
+if (!timestamp) return 'snack';
 const hour = new Date(timestamp).getHours();
-if (hour >= 5 && hour < 11) return ‘breakfast’;
-if (hour >= 11 && hour < 15) return ‘lunch’;
-if (hour >= 15 && hour < 21) return ‘dinner’;
-return ‘snack’;
+if (hour >= 5 && hour < 11) return 'breakfast';
+if (hour >= 11 && hour < 15) return 'lunch';
+if (hour >= 15 && hour < 21) return 'dinner';
+return 'snack';
 };
 
 const getMealIcon = (period) => {
 switch(period) {
-case ‘breakfast’: return Sunrise;
-case ‘lunch’: return CloudSun;
-case ‘dinner’: return Sunset;
+case 'breakfast': return Sunrise;
+case 'lunch': return CloudSun;
+case 'dinner': return Sunset;
 default: return MoonStar;
 }
 };
 
 const getMealLabel = (period) => {
 switch(period) {
-case ‘breakfast’: return ‘Morning’;
-case ‘lunch’: return ‘Midday’;
-case ‘dinner’: return ‘Evening’;
-default: return ‘Late Night’;
+case 'breakfast': return 'Morning';
+case 'lunch': return 'Midday';
+case 'dinner': return 'Evening';
+default: return 'Late Night';
 }
 };
 
@@ -249,34 +249,34 @@ if (w === 0 || h === 0 || a === 0) return 0;
 const weightKg = w * 0.453592;
 const heightCm = h * 2.54;
 let bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * a);
-if (sex === ‘male’) bmr += 5; else bmr -= 161;
+if (sex === 'male') bmr += 5; else bmr -= 161;
 return Math.max(0, Math.round(bmr));
 };
 
 const recommendProtein = (weightLbs, heightInches, goalWeightLbs, strengthLevel) => {
 const w = safeInt(weightLbs);
 const h = safeInt(heightInches);
-if (w === 0 || h === 0) return { min: 0, max: 0, target: 0, method: ‘Pending’, factorRange: ‘0’, bmi: ‘0’ };
+if (w === 0 || h === 0) return { min: 0, max: 0, target: 0, method: 'Pending', factorRange: '0', bmi: '0' };
 const weightKg = w / 2.20462;
 const heightM = h * 0.0254;
 const bmi = heightM > 0 ? weightKg / (heightM * heightM) : 0;
 const gWeight = safeInt(goalWeightLbs);
-let goalDirection = ‘maintain’;
-if (gWeight > 0 && gWeight < w) goalDirection = ‘loss’;
-else if (gWeight > 0 && gWeight > w) goalDirection = ‘gain’;
+let goalDirection = 'maintain';
+if (gWeight > 0 && gWeight < w) goalDirection = 'loss';
+else if (gWeight > 0 && gWeight > w) goalDirection = 'gain';
 let minFactor = 0.8;
 let maxFactor = 1.0;
 switch (strengthLevel) {
-case ‘not_yet’: minFactor = 0.8; maxFactor = 1.0; break;
-case ‘sometimes’: minFactor = 1.2; maxFactor = 1.6; break;
-case ‘regular’: if (goalDirection === ‘loss’) { minFactor = 1.6; maxFactor = 2.0; } else { minFactor = 1.4; maxFactor = 1.8; } break;
+case 'not_yet': minFactor = 0.8; maxFactor = 1.0; break;
+case 'sometimes': minFactor = 1.2; maxFactor = 1.6; break;
+case 'regular': if (goalDirection === 'loss') { minFactor = 1.6; maxFactor = 2.0; } else { minFactor = 1.4; maxFactor = 1.8; } break;
 default: minFactor = 0.8; maxFactor = 1.0;
 }
 let calcWeightKg = weightKg;
-let method = “Total body weight”;
+let method = "Total body weight";
 if (bmi >= 30) {
 calcWeightKg = 25 * (heightM * heightM);
-method = “Ref weight (BMI 25)”;
+method = "Ref weight (BMI 25)";
 }
 const minG = Math.round(calcWeightKg * minFactor);
 const maxG = Math.round(calcWeightKg * maxFactor);
@@ -333,152 +333,152 @@ return tdee + surplus;
 };
 
 const FOOD_LIBRARY = [
-{ name: ‘Chicken Breast (4oz)’, protein: 35, calories: 185, portion: ‘Palm size’ },
-{ name: ‘Chicken Thigh (4oz)’, protein: 28, calories: 240, portion: ‘Palm size’ },
-{ name: ‘Ground Beef 90% (4oz)’, protein: 22, calories: 200, portion: ‘Palm size’ },
-{ name: ‘Steak (Sirloin, 4oz)’, protein: 26, calories: 250, portion: ‘Palm size’ },
-{ name: ‘Salmon (4oz)’, protein: 23, calories: 230, portion: ‘Palm size’ },
-{ name: ‘Tuna (1 can)’, protein: 40, calories: 180, portion: ‘Standard can’ },
-{ name: ‘Egg (Large)’, protein: 6, calories: 70, portion: ‘1 egg’ },
-{ name: ‘Egg Whites (1 cup)’, protein: 26, calories: 125, portion: ‘Fist size’ },
-{ name: ‘Greek Yogurt (1 cup)’, protein: 20, calories: 130, portion: ‘Fist size’ },
-{ name: ‘Cottage Cheese (1 cup)’, protein: 25, calories: 220, portion: ‘Fist size’ },
-{ name: ‘Protein Powder (1 scoop)’, protein: 25, calories: 120, portion: ‘1 scoop’ },
-{ name: ‘Rice (1 cup cooked)’, protein: 4, calories: 200, portion: ‘Fist size’ },
-{ name: ‘Oats (1/2 cup dry)’, protein: 5, calories: 150, portion: ‘Cupped hand’ },
-{ name: ‘Pasta (1 cup cooked)’, protein: 7, calories: 220, portion: ‘Fist size’ },
-{ name: ‘Potato (Medium)’, protein: 4, calories: 160, portion: ‘Mouse size’ },
-{ name: ‘Bread (1 slice)’, protein: 3, calories: 80, portion: ‘DVD case size’ },
-{ name: ‘Apple (Medium)’, protein: 0, calories: 95, portion: ‘Baseball size’ },
-{ name: ‘Banana (Medium)’, protein: 1, calories: 105, portion: ‘Hand length’ },
-{ name: ‘Almonds (1/4 cup)’, protein: 6, calories: 160, portion: ‘Small handful’ },
-{ name: ‘Peanut Butter (1 tbsp)’, protein: 4, calories: 95, portion: ‘Thumb size’ },
-{ name: ‘Cheese (1 slice)’, protein: 7, calories: 110, portion: ‘1 slice’ },
-{ name: ‘Milk (1 cup)’, protein: 8, calories: 150, portion: ‘1 glass’ },
-{ name: ‘Tofu (4oz)’, protein: 9, calories: 80, portion: ‘Palm size’ },
-{ name: ‘Black Beans (1/2 cup)’, protein: 7, calories: 110, portion: ‘Cupped hand’ },
-{ name: ‘Shrimp (4oz)’, protein: 24, calories: 120, portion: ‘Palm size’ },
+{ name: 'Chicken Breast (4oz)', protein: 35, calories: 185, portion: 'Palm size' },
+{ name: 'Chicken Thigh (4oz)', protein: 28, calories: 240, portion: 'Palm size' },
+{ name: 'Ground Beef 90% (4oz)', protein: 22, calories: 200, portion: 'Palm size' },
+{ name: 'Steak (Sirloin, 4oz)', protein: 26, calories: 250, portion: 'Palm size' },
+{ name: 'Salmon (4oz)', protein: 23, calories: 230, portion: 'Palm size' },
+{ name: 'Tuna (1 can)', protein: 40, calories: 180, portion: 'Standard can' },
+{ name: 'Egg (Large)', protein: 6, calories: 70, portion: '1 egg' },
+{ name: 'Egg Whites (1 cup)', protein: 26, calories: 125, portion: 'Fist size' },
+{ name: 'Greek Yogurt (1 cup)', protein: 20, calories: 130, portion: 'Fist size' },
+{ name: 'Cottage Cheese (1 cup)', protein: 25, calories: 220, portion: 'Fist size' },
+{ name: 'Protein Powder (1 scoop)', protein: 25, calories: 120, portion: '1 scoop' },
+{ name: 'Rice (1 cup cooked)', protein: 4, calories: 200, portion: 'Fist size' },
+{ name: 'Oats (1/2 cup dry)', protein: 5, calories: 150, portion: 'Cupped hand' },
+{ name: 'Pasta (1 cup cooked)', protein: 7, calories: 220, portion: 'Fist size' },
+{ name: 'Potato (Medium)', protein: 4, calories: 160, portion: 'Mouse size' },
+{ name: 'Bread (1 slice)', protein: 3, calories: 80, portion: 'DVD case size' },
+{ name: 'Apple (Medium)', protein: 0, calories: 95, portion: 'Baseball size' },
+{ name: 'Banana (Medium)', protein: 1, calories: 105, portion: 'Hand length' },
+{ name: 'Almonds (1/4 cup)', protein: 6, calories: 160, portion: 'Small handful' },
+{ name: 'Peanut Butter (1 tbsp)', protein: 4, calories: 95, portion: 'Thumb size' },
+{ name: 'Cheese (1 slice)', protein: 7, calories: 110, portion: '1 slice' },
+{ name: 'Milk (1 cup)', protein: 8, calories: 150, portion: '1 glass' },
+{ name: 'Tofu (4oz)', protein: 9, calories: 80, portion: 'Palm size' },
+{ name: 'Black Beans (1/2 cup)', protein: 7, calories: 110, portion: 'Cupped hand' },
+{ name: 'Shrimp (4oz)', protein: 24, calories: 120, portion: 'Palm size' },
 ];
 
 const FAST_FOOD_DATA = {
 mcdonalds: {
-name: “McDonald’s”,
-color: “bg-red-500”,
+name: "McDonald's",
+color: "bg-red-500",
 items: [
-{ name: “McDouble (no bun)”, protein: 23, calories: 270, badge: “best”, note: “Surprisingly solid macro ratio” },
-{ name: “Egg McMuffin”, protein: 17, calories: 310, badge: “solid”, note: “Best breakfast option” },
-{ name: “Grilled Chicken Sandwich”, protein: 28, calories: 380, badge: “solid”, note: “Ask for no mayo to save 100 cal” },
-{ name: “6pc Chicken McNuggets”, protein: 15, calories: 250, badge: “solid”, note: “Decent protein snack” },
-{ name: “Big Mac”, protein: 25, calories: 590, badge: “aware”, note: “Fine, just plan around it” },
-{ name: “Large Fries”, protein: 5, calories: 490, badge: “aware”, note: “The real calorie bomb - split or skip” },
+{ name: "McDouble (no bun)", protein: 23, calories: 270, badge: "best", note: "Surprisingly solid macro ratio" },
+{ name: "Egg McMuffin", protein: 17, calories: 310, badge: "solid", note: "Best breakfast option" },
+{ name: "Grilled Chicken Sandwich", protein: 28, calories: 380, badge: "solid", note: "Ask for no mayo to save 100 cal" },
+{ name: "6pc Chicken McNuggets", protein: 15, calories: 250, badge: "solid", note: "Decent protein snack" },
+{ name: "Big Mac", protein: 25, calories: 590, badge: "aware", note: "Fine, just plan around it" },
+{ name: "Large Fries", protein: 5, calories: 490, badge: "aware", note: "The real calorie bomb - split or skip" },
 ]
 },
 chickfila: {
-name: “Chick-fil-A”,
-color: “bg-red-600”,
+name: "Chick-fil-A",
+color: "bg-red-600",
 items: [
-{ name: “Grilled Nuggets (12pc)”, protein: 38, calories: 200, badge: “best”, note: “Protein powerhouse, incredible ratio” },
-{ name: “Grilled Chicken Sandwich”, protein: 29, calories: 320, badge: “best”, note: “One of the best fast food options anywhere” },
-{ name: “Egg White Grill”, protein: 25, calories: 290, badge: “best”, note: “Best fast food breakfast, period” },
-{ name: “Grilled Cool Wrap”, protein: 37, calories: 350, badge: “solid”, note: “High protein, keeps you full” },
-{ name: “Original Chicken Sandwich”, protein: 29, calories: 440, badge: “solid”, note: “The classic - solid choice” },
-{ name: “Waffle Fries (Medium)”, protein: 4, calories: 420, badge: “aware”, note: “Delicious but calorie-dense” },
+{ name: "Grilled Nuggets (12pc)", protein: 38, calories: 200, badge: "best", note: "Protein powerhouse, incredible ratio" },
+{ name: "Grilled Chicken Sandwich", protein: 29, calories: 320, badge: "best", note: "One of the best fast food options anywhere" },
+{ name: "Egg White Grill", protein: 25, calories: 290, badge: "best", note: "Best fast food breakfast, period" },
+{ name: "Grilled Cool Wrap", protein: 37, calories: 350, badge: "solid", note: "High protein, keeps you full" },
+{ name: "Original Chicken Sandwich", protein: 29, calories: 440, badge: "solid", note: "The classic - solid choice" },
+{ name: "Waffle Fries (Medium)", protein: 4, calories: 420, badge: "aware", note: "Delicious but calorie-dense" },
 ]
 },
 chipotle: {
-name: “Chipotle”,
-color: “bg-orange-700”,
+name: "Chipotle",
+color: "bg-orange-700",
 items: [
-{ name: “Chicken Bowl (no rice)”, protein: 50, calories: 500, badge: “best”, note: “Double chicken for +$3 = 80g protein” },
-{ name: “Steak Bowl (no rice)”, protein: 46, calories: 520, badge: “best”, note: “Great macros, extra protein available” },
-{ name: “Chicken Tacos (3)”, protein: 35, calories: 510, badge: “solid”, note: “Built-in portion control” },
-{ name: “Salad (Chicken)”, protein: 45, calories: 480, badge: “solid”, note: “Get dressing on the side” },
-{ name: “Chicken Burrito”, protein: 50, calories: 1050, badge: “aware”, note: “It’s two meals - save half for later” },
-{ name: “Chips & Guac”, protein: 4, calories: 770, badge: “aware”, note: “Share or skip - easy to overdo” },
+{ name: "Chicken Bowl (no rice)", protein: 50, calories: 500, badge: "best", note: "Double chicken for +$3 = 80g protein" },
+{ name: "Steak Bowl (no rice)", protein: 46, calories: 520, badge: "best", note: "Great macros, extra protein available" },
+{ name: "Chicken Tacos (3)", protein: 35, calories: 510, badge: "solid", note: "Built-in portion control" },
+{ name: "Salad (Chicken)", protein: 45, calories: 480, badge: "solid", note: "Get dressing on the side" },
+{ name: "Chicken Burrito", protein: 50, calories: 1050, badge: "aware", note: "It's two meals - save half for later" },
+{ name: "Chips & Guac", protein: 4, calories: 770, badge: "aware", note: "Share or skip - easy to overdo" },
 ]
 },
 wendys: {
-name: “Wendy’s”,
-color: “bg-red-500”,
+name: "Wendy's",
+color: "bg-red-500",
 items: [
-{ name: “Grilled Chicken Sandwich”, protein: 30, calories: 370, badge: “best”, note: “Solid protein, reasonable calories” },
-{ name: “Jr. Hamburger”, protein: 15, calories: 250, badge: “solid”, note: “Simple and light” },
-{ name: “Chili (Large)”, protein: 23, calories: 270, badge: “best”, note: “Hidden gem - great macros” },
-{ name: “Grilled Chicken Wrap”, protein: 20, calories: 270, badge: “solid”, note: “Light and satisfying” },
-{ name: “Dave’s Single”, protein: 30, calories: 590, badge: “aware”, note: “Plan around it - skip fries” },
-{ name: “Baconator”, protein: 57, calories: 950, badge: “aware”, note: “High protein but very calorie-dense” },
+{ name: "Grilled Chicken Sandwich", protein: 30, calories: 370, badge: "best", note: "Solid protein, reasonable calories" },
+{ name: "Jr. Hamburger", protein: 15, calories: 250, badge: "solid", note: "Simple and light" },
+{ name: "Chili (Large)", protein: 23, calories: 270, badge: "best", note: "Hidden gem - great macros" },
+{ name: "Grilled Chicken Wrap", protein: 20, calories: 270, badge: "solid", note: "Light and satisfying" },
+{ name: "Dave's Single", protein: 30, calories: 590, badge: "aware", note: "Plan around it - skip fries" },
+{ name: "Baconator", protein: 57, calories: 950, badge: "aware", note: "High protein but very calorie-dense" },
 ]
 },
 tacobell: {
-name: “Taco Bell”,
-color: “bg-purple-600”,
+name: "Taco Bell",
+color: "bg-purple-600",
 items: [
-{ name: “Power Menu Bowl (Chicken)”, protein: 26, calories: 470, badge: “best”, note: “Best option at TB” },
-{ name: “Chicken Soft Taco”, protein: 12, calories: 170, badge: “solid”, note: “Light and stackable - get 2-3” },
-{ name: “Bean Burrito”, protein: 13, calories: 380, badge: “solid”, note: “Fiber-rich, keeps you full” },
-{ name: “Crunchy Taco”, protein: 8, calories: 170, badge: “solid”, note: “Classic, light option” },
-{ name: “Crunchwrap Supreme”, protein: 16, calories: 540, badge: “aware”, note: “Filling but calorie-dense” },
-{ name: “Nachos BellGrande”, protein: 12, calories: 740, badge: “aware”, note: “Share it or skip it” },
+{ name: "Power Menu Bowl (Chicken)", protein: 26, calories: 470, badge: "best", note: "Best option at TB" },
+{ name: "Chicken Soft Taco", protein: 12, calories: 170, badge: "solid", note: "Light and stackable - get 2-3" },
+{ name: "Bean Burrito", protein: 13, calories: 380, badge: "solid", note: "Fiber-rich, keeps you full" },
+{ name: "Crunchy Taco", protein: 8, calories: 170, badge: "solid", note: "Classic, light option" },
+{ name: "Crunchwrap Supreme", protein: 16, calories: 540, badge: "aware", note: "Filling but calorie-dense" },
+{ name: "Nachos BellGrande", protein: 12, calories: 740, badge: "aware", note: "Share it or skip it" },
 ]
 },
 subway: {
-name: “Subway”,
-color: “bg-green-600”,
+name: "Subway",
+color: "bg-green-600",
 items: [
-{ name: “Turkey Breast 6" (no cheese)”, protein: 18, calories: 280, badge: “best”, note: “Classic lean choice” },
-{ name: “Chicken Breast 6"”, protein: 23, calories: 320, badge: “best”, note: “Most protein per calorie” },
-{ name: “Veggie Delite 6"”, protein: 8, calories: 200, badge: “solid”, note: “Lightest option available” },
-{ name: “Steak & Cheese 6"”, protein: 26, calories: 380, badge: “solid”, note: “Good protein, moderate calories” },
-{ name: “Meatball Marinara 6"”, protein: 22, calories: 480, badge: “aware”, note: “Tasty but higher calorie” },
-{ name: “Footlong BMT”, protein: 34, calories: 860, badge: “aware”, note: “Save half for later” },
+{ name: "Turkey Breast 6" (no cheese)", protein: 18, calories: 280, badge: "best", note: "Classic lean choice" },
+{ name: "Chicken Breast 6"", protein: 23, calories: 320, badge: "best", note: "Most protein per calorie" },
+{ name: "Veggie Delite 6"", protein: 8, calories: 200, badge: "solid", note: "Lightest option available" },
+{ name: "Steak & Cheese 6"", protein: 26, calories: 380, badge: "solid", note: "Good protein, moderate calories" },
+{ name: "Meatball Marinara 6"", protein: 22, calories: 480, badge: "aware", note: "Tasty but higher calorie" },
+{ name: "Footlong BMT", protein: 34, calories: 860, badge: "aware", note: "Save half for later" },
 ]
 },
 burgerking: {
-name: “Burger King”,
-color: “bg-orange-600”,
+name: "Burger King",
+color: "bg-orange-600",
 items: [
-{ name: “Grilled Chicken Sandwich”, protein: 28, calories: 430, badge: “best”, note: “Best BK option” },
-{ name: “Hamburger”, protein: 13, calories: 240, badge: “solid”, note: “Simple and light” },
-{ name: “Whopper Jr.”, protein: 13, calories: 310, badge: “solid”, note: “Smaller portion, reasonable” },
-{ name: “4pc Chicken Nuggets”, protein: 8, calories: 170, badge: “solid”, note: “Light snack option” },
-{ name: “Whopper”, protein: 28, calories: 660, badge: “aware”, note: “Plan around it - no fries” },
-{ name: “Double Whopper”, protein: 48, calories: 900, badge: “aware”, note: “High protein but very calorie-dense” },
+{ name: "Grilled Chicken Sandwich", protein: 28, calories: 430, badge: "best", note: "Best BK option" },
+{ name: "Hamburger", protein: 13, calories: 240, badge: "solid", note: "Simple and light" },
+{ name: "Whopper Jr.", protein: 13, calories: 310, badge: "solid", note: "Smaller portion, reasonable" },
+{ name: "4pc Chicken Nuggets", protein: 8, calories: 170, badge: "solid", note: "Light snack option" },
+{ name: "Whopper", protein: 28, calories: 660, badge: "aware", note: "Plan around it - no fries" },
+{ name: "Double Whopper", protein: 48, calories: 900, badge: "aware", note: "High protein but very calorie-dense" },
 ]
 },
 pandaexpress: {
-name: “Panda Express”,
-color: “bg-red-700”,
+name: "Panda Express",
+color: "bg-red-700",
 items: [
-{ name: “Grilled Teriyaki Chicken”, protein: 36, calories: 300, badge: “best”, note: “Best protein option by far” },
-{ name: “String Bean Chicken”, protein: 14, calories: 190, badge: “best”, note: “Light and lean” },
-{ name: “Broccoli Beef”, protein: 13, calories: 150, badge: “solid”, note: “Low calorie, decent protein” },
-{ name: “Mushroom Chicken”, protein: 13, calories: 170, badge: “solid”, note: “Solid lighter choice” },
-{ name: “Orange Chicken”, protein: 13, calories: 490, badge: “aware”, note: “The fried coating adds up” },
-{ name: “Fried Rice”, protein: 9, calories: 530, badge: “aware”, note: “Get steamed rice instead (-250 cal)” },
+{ name: "Grilled Teriyaki Chicken", protein: 36, calories: 300, badge: "best", note: "Best protein option by far" },
+{ name: "String Bean Chicken", protein: 14, calories: 190, badge: "best", note: "Light and lean" },
+{ name: "Broccoli Beef", protein: 13, calories: 150, badge: "solid", note: "Low calorie, decent protein" },
+{ name: "Mushroom Chicken", protein: 13, calories: 170, badge: "solid", note: "Solid lighter choice" },
+{ name: "Orange Chicken", protein: 13, calories: 490, badge: "aware", note: "The fried coating adds up" },
+{ name: "Fried Rice", protein: 9, calories: 530, badge: "aware", note: "Get steamed rice instead (-250 cal)" },
 ]
 },
 starbucks: {
-name: “Starbucks”,
-color: “bg-green-700”,
+name: "Starbucks",
+color: "bg-green-700",
 items: [
-{ name: “Egg White & Roasted Red Pepper Bites”, protein: 13, calories: 170, badge: “best”, note: “Great protein snack” },
-{ name: “Turkey Bacon & Egg White Sandwich”, protein: 17, calories: 230, badge: “best”, note: “Best breakfast sandwich” },
-{ name: “Protein Box (Cheese & Fruit)”, protein: 13, calories: 470, badge: “solid”, note: “Balanced snack box” },
-{ name: “Spinach & Feta Wrap”, protein: 20, calories: 290, badge: “solid”, note: “Filling and reasonable” },
-{ name: “Bacon & Gouda Sandwich”, protein: 18, calories: 360, badge: “solid”, note: “Tasty, moderate calories” },
-{ name: “Vanilla Latte (Grande)”, protein: 8, calories: 250, badge: “aware”, note: “Get sugar-free syrup to save 80 cal” },
+{ name: "Egg White & Roasted Red Pepper Bites", protein: 13, calories: 170, badge: "best", note: "Great protein snack" },
+{ name: "Turkey Bacon & Egg White Sandwich", protein: 17, calories: 230, badge: "best", note: "Best breakfast sandwich" },
+{ name: "Protein Box (Cheese & Fruit)", protein: 13, calories: 470, badge: "solid", note: "Balanced snack box" },
+{ name: "Spinach & Feta Wrap", protein: 20, calories: 290, badge: "solid", note: "Filling and reasonable" },
+{ name: "Bacon & Gouda Sandwich", protein: 18, calories: 360, badge: "solid", note: "Tasty, moderate calories" },
+{ name: "Vanilla Latte (Grande)", protein: 8, calories: 250, badge: "aware", note: "Get sugar-free syrup to save 80 cal" },
 ]
 },
 fiveguys: {
-name: “Five Guys”,
-color: “bg-red-800”,
+name: "Five Guys",
+color: "bg-red-800",
 items: [
-{ name: “Little Hamburger”, protein: 27, calories: 480, badge: “best”, note: “Best option here - still a real burger” },
-{ name: “Little Bacon Burger”, protein: 33, calories: 560, badge: “solid”, note: “Smaller portion, good protein” },
-{ name: “Hamburger (Lettuce Wrap)”, protein: 40, calories: 440, badge: “best”, note: “Skip the bun, keep the flavor” },
-{ name: “Hot Dog”, protein: 18, calories: 545, badge: “solid”, note: “Surprisingly reasonable” },
-{ name: “Bacon Cheeseburger”, protein: 51, calories: 920, badge: “aware”, note: “High protein but calorie bomb” },
-{ name: “Regular Fries”, protein: 10, calories: 953, badge: “aware”, note: “Split with 2-3 people or skip” },
+{ name: "Little Hamburger", protein: 27, calories: 480, badge: "best", note: "Best option here - still a real burger" },
+{ name: "Little Bacon Burger", protein: 33, calories: 560, badge: "solid", note: "Smaller portion, good protein" },
+{ name: "Hamburger (Lettuce Wrap)", protein: 40, calories: 440, badge: "best", note: "Skip the bun, keep the flavor" },
+{ name: "Hot Dog", protein: 18, calories: 545, badge: "solid", note: "Surprisingly reasonable" },
+{ name: "Bacon Cheeseburger", protein: 51, calories: 920, badge: "aware", note: "High protein but calorie bomb" },
+{ name: "Regular Fries", protein: 10, calories: 953, badge: "aware", note: "Split with 2-3 people or skip" },
 ]
 }
 };
@@ -491,13 +491,12 @@ calories: list.reduce((sum, item) => sum + safeInt(item.calories), 0)
 };
 };
 
-const Toast = ({ message, action, onAction, onClose, type = ‘info’ }) => {
+const Toast = ({ message, action, onAction, onClose, type = 'info' }) => {
 useEffect(() => {
 const timer = setTimeout(onClose, 5000);
 return () => clearTimeout(timer);
 }, [onClose]);
 
-```
 const bgColor = type === 'success' ? 'bg-violet-800' : type === 'error' ? 'bg-red-800' : 'bg-stone-800';
 
 return (
@@ -510,12 +509,11 @@ return (
         )}
     </div>
 );
-```
 
 };
 
 const WeightUpdateModal = ({ isOpen, onClose, currentWeight, onUpdate }) => {
-const [weight, setWeight] = useState(currentWeight || ‘’);
+const [weight, setWeight] = useState(currentWeight || '');
 if (!isOpen) return null;
 return (
 <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
@@ -527,16 +525,16 @@ return (
 <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">Updating your weight keeps your calorie targets accurate.</p>
 <div className="mb-6 relative">
 <input
-type=“number” inputMode=“numeric” pattern=”[0-9]*”
+type="number" inputMode="numeric" pattern="[0-9]*"
 value={weight} onChange={(e) => setWeight(e.target.value)}
-className=“w-full p-4 text-center text-2xl font-bold bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none”
+className="w-full p-4 text-center text-2xl font-bold bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none"
 autoFocus
 />
 <span className="absolute right-8 top-5 text-stone-400 text-sm font-medium">lbs</span>
 </div>
 <div className="flex gap-3">
 <button onClick={onClose} className="flex-1 py-3 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 font-medium active:scale-95 transition-transform">Skip</button>
-<button onClick={() => { haptic.success(); onUpdate(weight); onClose(); }} className=“flex-1 py-3 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-xl hover:bg-stone-700 transition-colors active:scale-95”>Update</button>
+<button onClick={() => { haptic.success(); onUpdate(weight); onClose(); }} className="flex-1 py-3 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-xl hover:bg-stone-700 transition-colors active:scale-95">Update</button>
 </div>
 </div>
 </div>
@@ -553,7 +551,6 @@ return (
 );
 }
 
-```
 if (data.length === 1) {
     return (
         <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm mt-6">
@@ -611,7 +608,6 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
@@ -630,14 +626,14 @@ return (
 </div>
 <h3 className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-4">Independent & Free</h3>
 <div className="space-y-4 text-stone-600 dark:text-stone-400 leading-relaxed mb-8">
-<p>Steady was built on a simple belief: <strong>Nutrition shouldn’t be stressful.</strong></p>
-<p>We don’t sell your data. We don’t flood you with ads.</p>
+<p>Steady was built on a simple belief: <strong>Nutrition shouldn't be stressful.</strong></p>
+<p>We don't sell your data. We don't flood you with ads.</p>
 </div>
 <div className="bg-stone-50 dark:bg-stone-800 p-6 rounded-2xl mb-8">
-<p className="text-stone-800 dark:text-stone-200 font-medium mb-2">If Steady has helped you…</p>
+<p className="text-stone-800 dark:text-stone-200 font-medium mb-2">If Steady has helped you...</p>
 <p className="text-xs text-stone-500 dark:text-stone-400">Consider buying us a coffee. It helps cover database costs and keeps the app free for everyone.</p>
 </div>
-<button onClick={() => window.open(‘https://buymeacoffee.com/’, ‘_blank’)} className=“w-full py-4 bg-[#FFDD00] text-stone-900 font-bold rounded-2xl shadow-lg shadow-yellow-100 dark:shadow-none hover:bg-[#FACC15] transition-transform active:scale-95 flex items-center justify-center gap-2”>
+<button onClick={() => window.open('https://buymeacoffee.com/', '_blank')} className="w-full py-4 bg-[#FFDD00] text-stone-900 font-bold rounded-2xl shadow-lg shadow-yellow-100 dark:shadow-none hover:bg-[#FACC15] transition-transform active:scale-95 flex items-center justify-center gap-2">
 <Coffee size={20} /> Buy us a Coffee
 </button>
 </div>
@@ -649,7 +645,6 @@ const InsightCard = ({ proteinRemaining, caloriesOver, caloriesRemaining, protei
 const hoursLeft = 24 - new Date().getHours();
 let insight = null;
 
-```
 if (caloriesOver >= 200) {
     const isAlsoProteinDone = proteinRemaining <= 0;
     insight = {
@@ -710,7 +705,6 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
@@ -723,7 +717,7 @@ className="w-full p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-10
 >
 <div className="flex items-center gap-2">
 <Copy size={16} className="text-indigo-600 dark:text-indigo-400" />
-<span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Copy yesterday’s log</span>
+<span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Copy yesterday's log</span>
 </div>
 <span className="text-xs text-indigo-500 dark:text-indigo-400">{yesterdayItems.length} items</span>
 </button>
@@ -735,7 +729,6 @@ const [foods, setFoods] = useState(DB.getRecentFoods());
 const [editing, setEditing] = useState(null);
 const [confirmDelete, setConfirmDelete] = useState(null);
 
-```
 const refresh = () => {
     const updated = DB.getRecentFoods();
     setFoods(updated);
@@ -847,7 +840,6 @@ return (
         )}
     </div>
 );
-```
 
 };
 
@@ -861,7 +853,7 @@ return (
 </div>
 <h3 className="text-lg font-bold text-stone-800 dark:text-stone-100 text-center mb-2">Reset all data?</h3>
 <p className="text-sm text-stone-500 dark:text-stone-400 text-center mb-6 leading-relaxed">
-This permanently deletes your profile, food logs, and weight history from this device. There’s no undo.
+This permanently deletes your profile, food logs, and weight history from this device. There's no undo.
 </p>
 <div className="flex gap-3">
 <button onClick={onCancel} className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors active:scale-95">Cancel</button>
@@ -874,15 +866,14 @@ This permanently deletes your profile, food logs, and weight history from this d
 
 const PersonalDetailsView = ({ profile, onUpdate, onBack }) => {
 const [formData, setFormData] = useState({
-currentWeight: profile.currentWeight || ‘’,
-goalWeight: profile.goalWeight || ‘’,
-activity: profile.activity || ‘sedentary’,
-strengthTrainingLevel: profile.strengthTrainingLevel || ‘not_yet’
+currentWeight: profile.currentWeight || '',
+goalWeight: profile.goalWeight || '',
+activity: profile.activity || 'sedentary',
+strengthTrainingLevel: profile.strengthTrainingLevel || 'not_yet'
 });
 const [isSaving, setIsSaving] = useState(false);
 const [saved, setSaved] = useState(false);
 
-```
 const handleSave = async () => {
     setIsSaving(true);
     haptic.medium();
@@ -974,7 +965,6 @@ return (
         </button>
     </div>
 );
-```
 
 };
 
@@ -985,7 +975,6 @@ const [showMyFoods, setShowMyFoods] = useState(false);
 const [showPersonalDetails, setShowPersonalDetails] = useState(false);
 const fileInputRef = useRef(null);
 
-```
 if (showMyFoods) return (
     <MyFoodsView onBack={() => setShowMyFoods(false)} onFoodsChanged={onFoodsChanged} />
 );
@@ -1080,7 +1069,6 @@ return (
         <ConfirmResetModal isOpen={showResetConfirm} onCancel={() => setShowResetConfirm(false)} onConfirm={() => { haptic.error(); onLogout(); }} />
     </div>
 );
-```
 
 };
 
@@ -1090,12 +1078,11 @@ const ONBOARD_TOTAL = 7;
 const NumPad = ({ value, onChange, onNext, nextDisabled, hint }) => {
 const tap = (k) => {
 haptic.light();
-if (k === ‘⌫’) { onChange(value.slice(0, -1)); }
-else if (k === ‘→’) { if (!nextDisabled) onNext(); }
+if (k === '⌫') { onChange(value.slice(0, -1)); }
+else if (k === '→') { if (!nextDisabled) onNext(); }
 else { if (value.length < 4) onChange(value + k); }
 };
 
-```
 const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','→'];
 const displayVal = value || '';
 
@@ -1127,7 +1114,6 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
@@ -1136,16 +1122,20 @@ const [step, setStep] = useState(0);
 const [dir, setDir] = useState(1);
 const [animKey, setAnimKey] = useState(0);
 const [form, setForm] = useState({
-currentWeight: ‘’, goalWeight: ‘’, age: ‘’,
-heightFt: ‘’, heightIn: ‘’, sex: ‘female’,
-activity: ‘sedentary’, strengthTrainingLevel: ‘not_yet’,
-manualCalories: ‘’, manualProtein: ‘’, manualWater: ‘’,
+currentWeight: '', goalWeight: '', age: '',
+heightFt: '', heightIn: '', sex: 'female',
+activity: 'sedentary', strengthTrainingLevel: 'not_yet',
+manualCalories: '', manualProtein: '', manualWater: '',
 });
 const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 const [activeHeightField, setActiveHeightField] = useState('ft');
 
-```
-const go = (delta) => { haptic[delta > 0 ? 'medium' : 'light'](); setDir(delta); setAnimKey(k => k + 1); setStep(s => s + delta); };
+const go = (delta) => {
+  haptic[delta > 0 ? 'medium' : 'light']();
+  setDir(delta);
+  setAnimKey(k => k + 1);
+  setStep((s) => Math.max(0, Math.min(ONBOARD_TOTAL, s + delta)));
+};
 const next = () => go(1);
 const back = () => go(-1);
 const set = (patch) => setForm(f => ({ ...f, ...patch }));
@@ -1461,7 +1451,6 @@ return (
         )}
     </div>
 );
-```
 
 };
 
@@ -1472,7 +1461,6 @@ const percentage = Math.min(100, Math.max(0, (c / t) * 100));
 const isComplete = percentage >= 100;
 const overAmount = Math.max(0, c - t);
 
-```
 const cardBorder = isOverBudget
     ? 'border-red-200 dark:border-red-800 shadow-md'
     : isComplete ? 'border-violet-200 dark:border-violet-800 shadow-md animate-pop'
@@ -1516,18 +1504,16 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
 // ── INLINE FOOD SEARCH — used inside EntryEditor ─────────────────────────────
 const InlineFoodSearch = ({ recentFoods, onSelect, onClose }) => {
-const [query, setQuery] = useState(’’);
+const [query, setQuery] = useState('');
 const [customMode, setCustomMode] = useState(false);
-const [custom, setCustom] = useState({ name: ‘’, protein: ‘’, calories: ‘’ });
+const [custom, setCustom] = useState({ name: '', protein: '', calories: '' });
 const inputRef = useRef(null);
 
-```
 useEffect(() => { inputRef.current?.focus(); }, []);
 
 const results = useMemo(() => {
@@ -1588,20 +1574,18 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
 // ── ENTRY EDITOR — create/edit a food OR a meal ──────────────────────────────
 const EntryEditor = ({ entry, type: initialType, recentFoods, onSave, onCancel }) => {
-const [entryType, setEntryType] = useState(entry?._type || initialType || ‘food’);
-const [name, setName] = useState(entry?.name || ‘’);
-const [protein, setProtein] = useState(entry?.protein != null ? String(entry.protein) : ‘’);
-const [calories, setCalories] = useState(entry?.calories != null ? String(entry.calories) : ‘’);
-const [items, setItems] = useState(entry?.items ? […entry.items] : []);
+const [entryType, setEntryType] = useState(entry?._type || initialType || 'food');
+const [name, setName] = useState(entry?.name || '');
+const [protein, setProtein] = useState(entry?.protein != null ? String(entry.protein) : '');
+const [calories, setCalories] = useState(entry?.calories != null ? String(entry.calories) : '');
+const [items, setItems] = useState(entry?.items ? [...entry.items] : []);
 const [showSearch, setShowSearch] = useState(false);
 
-```
 const isEdit = !!entry;
 const isMeal = entryType === 'meal';
 const mealTotalsCalc = useMemo(() => computeTotals(items), [items]);
@@ -1693,7 +1677,6 @@ return (
         </button>
     </div>
 );
-```
 
 };
 
@@ -1705,7 +1688,6 @@ const [editingEntry, setEditingEntry] = useState(null);
 const [confirmDelete, setConfirmDelete] = useState(null);
 const [creating, setCreating] = useState(false);
 
-```
 const refreshAll = () => {
     const f = DB.getRecentFoods();
     setLocalFoods(f);
@@ -1812,20 +1794,18 @@ return (
         )}
     </div>
 );
-```
 
 };
 
 // ── ADD FOOD MODAL — 2 tabs: Search | My Foods ───────────────────────────────
 const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initialData, onLogMeal, onFoodsChanged }) => {
-const [mode, setMode] = useState(‘search’);
-const [food, setFood] = useState({ name: ‘’, protein: ‘’, calories: ‘’, portionTip: ‘’ });
+const [mode, setMode] = useState('search');
+const [food, setFood] = useState({ name: '', protein: '', calories: '', portionTip: '' });
 const [suggestions, setSuggestions] = useState([]);
 const [showSuggestions, setShowSuggestions] = useState(false);
 const inputRef = useRef(null);
 const suppressRef = useRef(false);
 
-```
 useEffect(() => {
     if (suppressRef.current) { suppressRef.current = false; setSuggestions([]); setShowSuggestions(false); return; }
     if (!food.name || food.name.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
@@ -1971,7 +1951,6 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
@@ -1979,7 +1958,6 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
 const list = items || [];
 if (list.length === 0) return null;
 
-```
 const swipeStartX = useRef({});
 const [swipedIdx, setSwipedIdx] = useState(null);
 
@@ -2079,7 +2057,6 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
@@ -2088,7 +2065,6 @@ const todayIndex = new Date().getDate() % FOOD_LIBRARY.length;
 const featuredFood = FOOD_LIBRARY[todayIndex];
 const efficiency = (featuredFood.protein / featuredFood.calories * 100).toFixed(1);
 
-```
 return (
     <div className="space-y-3 animate-fade-in">
         {/* Copy yesterday — promoted to top when day is empty */}
@@ -2149,7 +2125,6 @@ return (
         </button>
     </div>
 );
-```
 
 };
 
@@ -2159,7 +2134,6 @@ const [loading, setLoading] = useState(true);
 const [weightHistory, setWeightHistory] = useState([]);
 const [weeklyInsight, setWeeklyInsight] = useState(null);
 
-```
 useEffect(() => {
     const getPastDates = () => {
         const dates = [];
@@ -2261,7 +2235,6 @@ return (
         <WeightGraph data={weightHistory} />
     </div>
 );
-```
 
 };
 
@@ -2269,7 +2242,6 @@ const FastFoodGuide = ({ onLogFood }) => {
 const [selectedChain, setSelectedChain] = useState(null);
 const chains = Object.entries(FAST_FOOD_DATA);
 
-```
 const getBadgeStyle = (badge) => {
     switch(badge) {
         case 'best': return 'bg-teal-100 dark:bg-teal-900/40 text-violet-700 dark:text-violet-300';
@@ -2360,15 +2332,13 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
 const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
-const [activeTab, setActiveTab] = useState(‘basics’);
-const [filter, setFilter] = useState(‘all’);
+const [activeTab, setActiveTab] = useState('basics');
+const [filter, setFilter] = useState('all');
 
-```
 const sortedFoods = useMemo(() => [...FOOD_LIBRARY].sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories)), []);
 
 const contextualFoods = useMemo(() => {
@@ -2444,7 +2414,6 @@ return (
         )}
     </div>
 );
-```
 
 };
 
@@ -2452,10 +2421,9 @@ return (
 const InstallPrompt = ({ onDismiss }) => {
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isAndroid = /android/i.test(navigator.userAgent);
-const isStandalone = window.matchMedia(’(display-mode: standalone)’).matches || window.navigator.standalone === true;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 if (isStandalone) { onDismiss(); return null; }
 
-```
 const instructions = isIOS
     ? [{ icon: 'Share', text: 'Tap the Share button in Safari' }, { icon: '+', text: 'Tap Add to Home Screen' }, { icon: 'Done', text: 'Tap Add — done!' }]
     : isAndroid
@@ -2494,7 +2462,6 @@ return (
         </div>
     </div>
 );
-```
 
 };
 
@@ -2503,7 +2470,7 @@ const Steady = () => {
 const [profile, setProfile] = useState(DB.getProfile());
 const [selectedDate, setSelectedDate] = useState(getTodayStr());
 const [logs, setLogs] = useState(null);
-const [view, setView] = useState(‘dashboard’);
+const [view, setView] = useState('dashboard');
 const [showAddModal, setShowAddModal] = useState(false);
 const [showWeightModal, setShowWeightModal] = useState(false);
 const [showInstallPrompt, setShowInstallPrompt] = useState(false);
@@ -2516,7 +2483,6 @@ const [editingItem, setEditingItem] = useState(null);
 const viewChangeRef = useRef(false);
 const dateChangeRef = useRef(false);
 
-```
 useEffect(() => {
     const dayLog = DB.getLog(selectedDate);
     setLogs(dayLog || { water: 0, items: [] });
@@ -2924,13 +2890,12 @@ return (
         )}
     </div>
 );
-```
 
 };
 
-const root = createRoot(document.getElementById(‘root’));
+const root = createRoot(document.getElementById('root'));
 root.render(<Steady />);
 
-if (typeof window.__steadyReady === ‘function’) {
+if (typeof window.__steadyReady === 'function') {
 setTimeout(window.__steadyReady, 150);
 }
