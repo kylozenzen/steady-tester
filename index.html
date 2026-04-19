@@ -260,8 +260,7 @@
 
     // ── Boot Steady ────────────────────────────────────────────────────────
     try {
-      // Netlify build rewrites this fetch path to 'script.dist.js' (pre-compiled).
-      // In dev / GitHub Pages, Babel compiles it at runtime below.
+      // Boot directly from script.js so deploys cannot fail on a missing compiled artifact.
       const res = await fetch('script.js');
       if (!res.ok) throw new Error(`Could not load script.js (HTTP ${res.status}). Are you offline?`);
 

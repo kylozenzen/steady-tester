@@ -1,13 +1,5 @@
 # ── Steady — Netlify Build Config ────────────────────────────────────────────
-#
-# What this does on every deploy:
-#   1. Stamps sw.js with a Unix timestamp so returning users get fresh assets
-#   2. Compiles script.js JSX → script.dist.js (eliminates Babel-in-browser lag)
-#   3. Rewrites index.html to load script.dist.js instead of script.js
-#
-# Netlify setup:
-#   Build command:    (leave blank — this file handles it)
-#   Publish directory: .   (your repo root)
+# Keep deploys deterministic: no runtime rewrites of index/script paths.
 
 [build]
   publish = "."
@@ -15,26 +7,15 @@
     echo '=== Steady Build ===' &&
     BUILD_ID=$(date +%s) &&
     echo "Build ID: $BUILD_ID" &&
-
     echo '--- Stamping service worker cache version...' &&
     sed -i "s/__BUILD_ID__/$BUILD_ID/g" sw.js &&
-
-    echo '--- Installing Babel...' &&
-    npm install --save-dev @babel/cli @babel/core @babel/preset-react 2>/dev/null &&
-
-    echo '--- Compiling JSX...' &&
-    npx babel script.js --presets @babel/preset-react --out-file script.dist.js &&
-
-    echo '--- Updating index.html to use compiled script...' &&
-    sed -i "s|fetch('script.js')|fetch('script.dist.js')|g" index.html &&
-
     echo '=== Build complete ==='
   """
 
 [build.environment]
   NODE_VERSION = "18"
 
-# sw.js and index.html must always be fetched fresh (never cached by CDN)
+# Ensure boot-critical assets revalidate to avoid stale deploy mismatches.
 [[headers]]
   for = "/sw.js"
   [headers.values]
@@ -45,11 +26,10 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
-# Compiled JS and CSS: cache aggressively (content changes = new deploy = new BUILD_ID)
 [[headers]]
-  for = "/script.dist.js"
+  for = "/script.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "no-cache, no-store, must-revalidate"
 
 [[headers]]
   for = "/style.css"

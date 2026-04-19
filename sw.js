@@ -1,7 +1,7 @@
 // ─── CACHE VERSION ──────────────────────────────────────────────────────────
 // This token is replaced at deploy time by netlify.toml:
 //   sed -i "s/__BUILD_ID__/$(date +%s)/" sw.js
-// Result: steady-cache-1748000000  (a new name every deploy = old cache purged)
+// Result: steady-cache-1748000000 (new cache every deploy)
 const CACHE_VERSION = '__BUILD_ID__';
 const CACHE_NAME = `steady-cache-${CACHE_VERSION}`;
 
@@ -16,23 +16,30 @@ const CORE_ASSETS = [
   '/icons/steady-maskable-512.png',
 ];
 
-// CDN deps: cache on first use (network-first so they stay fresh)
+const BOOT_ASSETS = new Set(['/', '/index.html', '/script.js']);
+
+// CDN deps: network-first so they stay fresh, with offline fallback
 const CDN_ORIGINS = [
   'https://cdn.tailwindcss.com',
   'https://unpkg.com',
   'https://esm.sh',
 ];
 
-// ─── INSTALL ────────────────────────────────────────────────────────────────
+const putInCache = async (request, response) => {
+  if (!response || !response.ok) return response;
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(request, response.clone());
+  return response;
+};
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(CORE_ASSETS))
-      .then(() => self.skipWaiting())  // don't wait for old tabs to close
+      .then(() => self.skipWaiting())
   );
 });
 
-// ─── ACTIVATE ───────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
@@ -40,60 +47,58 @@ self.addEventListener('activate', (event) => {
         Promise.all(
           keys
             .filter((k) => k.startsWith('steady-cache-') && k !== CACHE_NAME)
-            .map((k) => { console.log('[SW] Purging old cache:', k); return caches.delete(k); })
+            .map((k) => caches.delete(k))
         )
       )
       .then(() => self.clients.claim())
   );
 });
 
-// ─── FETCH ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   if (request.method !== 'GET') return;
 
-  // SPA navigation → always serve shell
-  if (request.mode === 'navigate') {
+  const isCDN = CDN_ORIGINS.some((o) => request.url.startsWith(o));
+  const isCoreAsset = CORE_ASSETS.some((a) => url.pathname === a || url.pathname === `${a}/`);
+  const isBootAsset = BOOT_ASSETS.has(url.pathname);
+
+  if (request.mode === 'navigate' || isBootAsset) {
     event.respondWith(
-      caches.match('/index.html').then((c) => c || fetch(request))
+      fetch(request)
+        .then((res) => putInCache(request, res))
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html')))
     );
     return;
   }
 
-  const isCoreAsset = CORE_ASSETS.some((a) => url.pathname === a || url.pathname === a + '/');
-  const isCDN       = CDN_ORIGINS.some((o) => request.url.startsWith(o));
-
   if (isCoreAsset) {
-    // Cache-first + background revalidate
     event.respondWith(
       caches.match(request).then((cached) => {
-        const net = fetch(request).then((res) => {
-          if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(request, res.clone()));
-          return res;
-        });
-        return cached || net;
+        const network = fetch(request)
+          .then((res) => putInCache(request, res))
+          .catch(() => cached);
+        return cached || network;
       })
     );
-  } else if (isCDN) {
-    // Network-first for CDN (stay fresh, fall back offline)
+    return;
+  }
+
+  if (isCDN) {
     event.respondWith(
       fetch(request)
-        .then((res) => {
-          if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(request, res.clone()));
-          return res;
-        })
+        .then((res) => putInCache(request, res))
         .catch(() => caches.match(request))
     );
-  } else {
-    event.respondWith(
-      caches.match(request).then((c) => c || fetch(request).catch(() => null))
-    );
+    return;
   }
+
+  event.respondWith(
+    caches.match(request).then((cached) => cached || fetch(request).catch(() => null))
+  );
 });
 
-// ─── MESSAGES ───────────────────────────────────────────────────────────────
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
