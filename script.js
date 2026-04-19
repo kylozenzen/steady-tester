@@ -1142,6 +1142,7 @@ activity: ‘sedentary’, strengthTrainingLevel: ‘not_yet’,
 manualCalories: ‘’, manualProtein: ‘’, manualWater: ‘’,
 });
 const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+const [activeHeightField, setActiveHeightField] = useState('ft');
 
 ```
 const go = (delta) => { haptic[delta > 0 ? 'medium' : 'light'](); setDir(delta); setAnimKey(k => k + 1); setStep(s => s + delta); };
@@ -1240,14 +1241,13 @@ return (
                     </div>
                     {/* Two display fields — tap to focus, single numpad below */}
                     {(() => {
-                        const [activeField, setActiveField] = React.useState('ft');
                         const tapKey = (k) => {
                             haptic.light();
                             if (k === '⌫') {
-                                if (activeField === 'ft') set({ heightFt: form.heightFt.slice(0, -1) });
+                                if (activeHeightField === 'ft') set({ heightFt: form.heightFt.slice(0, -1) });
                                 else set({ heightIn: form.heightIn.slice(0, -1) });
                             } else {
-                                if (activeField === 'ft') {
+                                if (activeHeightField === 'ft') {
                                     if (form.heightFt.length < 1) set({ heightFt: k });
                                 } else {
                                     const next = form.heightIn + k;
@@ -1264,8 +1264,8 @@ return (
                                         { key: 'ft', val: form.heightFt, label: 'Feet', hint: 'ft' },
                                         { key: 'in', val: form.heightIn, label: 'Inches', hint: 'in' },
                                     ].map(({ key, val, label, hint }) => (
-                                        <button key={key} onClick={() => setActiveField(key)}
-                                            className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left ${activeField === key ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' : 'border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-800'}`}>
+                                        <button key={key} onClick={() => setActiveHeightField(key)}
+                                            className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left ${activeHeightField === key ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' : 'border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-800'}`}>
                                             <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{label}</div>
                                             <div className={`text-3xl font-extrabold ${val ? 'text-stone-800 dark:text-stone-100' : 'text-stone-300 dark:text-stone-600'}`}>
                                                 {val || '—'}
