@@ -7,7 +7,7 @@ import {
     Settings, Save, LogOut, Leaf, ChevronLeft, ChevronRight, Calendar,
     Moon, Sun, Download, Upload, Lightbulb, Edit3, TrendingUp, Heart, Coffee,
     Undo2, Copy, Zap, Clock, Sunrise, CloudSun, Sunset, MoonStar, Sparkles,
-    AlertCircle, RefreshCw, Store
+    AlertCircle, RefreshCw, Store, ChefHat, Trash2
 } from 'lucide-react';
 
 const __ga = {
@@ -21,31 +21,24 @@ function trackEvent(name, params = {}) {
         if (typeof window.gtag === 'function') {
             window.gtag('event', name, params);
         }
-    } catch (e) {
-        // fail silently
-    }
+    } catch (e) {}
 }
 
-// --- SERVICE WORKER REGISTRATION ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker
             .register('/sw.js')
             .catch((err) => {
-                // Non-fatal; app should still work fine
                 console.error('Service worker registration failed:', err);
             });
     });
 }
-
-// Utils
 
 function safeNum(n) {
     const x = Number(n);
     return Number.isFinite(x) ? x : undefined;
 }
 
-// --- HAPTIC FEEDBACK ---
 const haptic = {
     light: () => navigator.vibrate?.(10),
     medium: () => navigator.vibrate?.(25),
@@ -94,8 +87,25 @@ const DB = {
         }
         return logs;
     },
+    // ── MEALS ──────────────────────────────────────────────────────────────
+    getMeals: () => JSON.parse(localStorage.getItem('steady_meals') || '[]'),
+    saveMeals: (meals) => localStorage.setItem('steady_meals', JSON.stringify(meals)),
+    addMeal: (meal) => {
+        const meals = DB.getMeals();
+        const newMeal = { ...meal, id: `meal_${Date.now()}`, createdAt: Date.now() };
+        meals.push(newMeal);
+        DB.saveMeals(meals);
+        return newMeal;
+    },
+    updateMeal: (id, patch) => {
+        const meals = DB.getMeals().map(m => m.id === id ? { ...m, ...patch } : m);
+        DB.saveMeals(meals);
+    },
+    deleteMeal: (id) => {
+        DB.saveMeals(DB.getMeals().filter(m => m.id !== id));
+    },
+    // ───────────────────────────────────────────────────────────────────────
     clearAll: () => {
-        // Confirmation is handled by the in-app ConfirmResetModal in SettingsView
         localStorage.clear();
         window.location.reload();
     },
@@ -106,6 +116,7 @@ const DB = {
             profile: DB.getProfile(),
             weightHistory: DB.getWeightHistory(),
             recentFoods: DB.getRecentFoods(),
+            meals: DB.getMeals(),
             logs: DB.getAllLogs()
         };
         return data;
@@ -125,20 +136,17 @@ const DB = {
     importData: (jsonData) => {
         try {
             const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
-            if (!data.profile) {
-                throw new Error('Invalid backup file: missing profile data');
-            }
+            if (!data.profile) throw new Error('Invalid backup file: missing profile data');
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && key.startsWith('steady_')) {
-                    keysToRemove.push(key);
-                }
+                if (key && key.startsWith('steady_')) keysToRemove.push(key);
             }
             keysToRemove.forEach(key => localStorage.removeItem(key));
             if (data.profile) localStorage.setItem('steady_profile', JSON.stringify(data.profile));
             if (data.weightHistory) localStorage.setItem('steady_weight_history', JSON.stringify(data.weightHistory));
             if (data.recentFoods) localStorage.setItem('steady_recent_foods', JSON.stringify(data.recentFoods));
+            if (data.meals) localStorage.setItem('steady_meals', JSON.stringify(data.meals));
             if (data.logs) {
                 Object.entries(data.logs).forEach(([date, log]) => {
                     localStorage.setItem(`steady_logs_${date}`, JSON.stringify(log));
@@ -280,15 +288,12 @@ const suggestTargetWeight = (currentWeight, heightFt, heightIn) => {
     const w = safeInt(currentWeight);
     const h = (safeInt(heightFt) * 12) + safeInt(heightIn);
     if (w === 0 || h === 0) return null;
-    
     const heightM = h * 0.0254;
     const currentWeightKg = w / 2.20462;
     const currentBMI = currentWeightKg / (heightM * heightM);
-    
     const targetBMI = 22;
     const targetWeightKg = targetBMI * (heightM * heightM);
     const targetWeightLbs = Math.round(targetWeightKg * 2.20462);
-    
     if (currentBMI > 25) {
         return { val: targetWeightLbs, reason: `Based on a healthy BMI of ${targetBMI}` };
     } else if (currentBMI < 18.5) {
@@ -298,16 +303,12 @@ const suggestTargetWeight = (currentWeight, heightFt, heightIn) => {
     }
 };
 
-// NEW: Suggest Healthy BMI Range (18.5 - 24.9)
 const suggestHealthyRange = (heightFt, heightIn) => {
     const h = (safeInt(heightFt) * 12) + safeInt(heightIn);
     if (h === 0) return null;
-
     const heightM = h * 0.0254;
-    // World Health Organization Healthy BMI Range: 18.5 - 24.9
     const minKg = 18.5 * (heightM * heightM);
     const maxKg = 24.9 * (heightM * heightM);
-    
     return {
         min: Math.round(minKg * 2.20462),
         max: Math.round(maxKg * 2.20462)
@@ -317,12 +318,9 @@ const suggestHealthyRange = (heightFt, heightIn) => {
 const calculateCalorieGoal = (bmr, activity, currentWeight, goalWeight) => {
     const activityMultipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 };
     const tdee = Math.round(bmr * (activityMultipliers[activity] || 1.2));
-    
     const gWeight = safeInt(goalWeight);
     const cWeight = safeInt(currentWeight);
-    
     if (gWeight <= 0 || gWeight === cWeight) return tdee;
-    
     if (gWeight < cWeight) {
         const percentDeficit = Math.round(tdee * 0.15);
         const maxDeficit = 750;
@@ -362,7 +360,6 @@ const FOOD_LIBRARY = [
     { name: 'Shrimp (4oz)', protein: 24, calories: 120, portion: 'Palm size' },
 ];
 
-// --- FAST FOOD DATABASE ---
 const FAST_FOOD_DATA = {
     mcdonalds: {
         name: "McDonald's",
@@ -514,6 +511,367 @@ const Toast = ({ message, action, onAction, onClose, type = 'info' }) => {
     );
 };
 
+// ── MEAL MACROS HELPER ────────────────────────────────────────────────────────
+const mealTotals = (meal) => computeTotals(meal.items || []);
+
+// ── MY MEALS — full manager (list + create + edit) ───────────────────────────
+const MyMealsManager = ({ onLogMeal, recentFoods }) => {
+    const [meals, setMeals] = useState(DB.getMeals());
+    const [view, setView] = useState('list'); // 'list' | 'create' | 'edit'
+    const [editingMeal, setEditingMeal] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
+
+    const refresh = () => setMeals(DB.getMeals());
+
+    const handleLog = (meal) => {
+        haptic.success();
+        onLogMeal(meal);
+    };
+
+    const handleDeleteMeal = (id) => {
+        haptic.error();
+        DB.deleteMeal(id);
+        setConfirmDelete(null);
+        refresh();
+    };
+
+    if (view === 'create' || view === 'edit') {
+        return (
+            <MealEditor
+                meal={editingMeal}
+                recentFoods={recentFoods}
+                onSave={(meal) => {
+                    if (view === 'edit') {
+                        DB.updateMeal(meal.id, meal);
+                    } else {
+                        DB.addMeal(meal);
+                    }
+                    refresh();
+                    setView('list');
+                    setEditingMeal(null);
+                }}
+                onCancel={() => { setView('list'); setEditingMeal(null); }}
+            />
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            {/* Create button */}
+            <button
+                onClick={() => { haptic.medium(); setEditingMeal(null); setView('create'); }}
+                className="w-full py-3 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-2xl text-stone-500 dark:text-stone-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-violet-300 dark:hover:border-violet-700 hover:text-violet-600 dark:hover:text-violet-300 transition-all active:scale-[0.98]"
+            >
+                <Plus size={16} /> Create New Meal
+            </button>
+
+            {meals.length === 0 ? (
+                <div className="text-center py-8">
+                    <div className="w-12 h-12 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <ChefHat size={22} className="text-stone-400" />
+                    </div>
+                    <p className="text-sm font-bold text-stone-600 dark:text-stone-300 mb-1">No saved meals yet</p>
+                    <p className="text-xs text-stone-400 leading-relaxed">Build a meal once, log it in one tap.<br/>Great for your go-to combos.</p>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {meals.map((meal) => {
+                        const t = mealTotals(meal);
+                        return (
+                            <div key={meal.id} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 overflow-hidden">
+                                {confirmDelete === meal.id ? (
+                                    <div className="p-4">
+                                        <p className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">Delete &ldquo;{meal.name}&rdquo;?</p>
+                                        <p className="text-xs text-stone-400 mb-3">This removes the saved meal. Past logs are unaffected.</p>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setConfirmDelete(null)}
+                                                className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-sm active:scale-95 transition-transform">
+                                                Keep
+                                            </button>
+                                            <button onClick={() => handleDeleteMeal(meal.id)}
+                                                className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-4">
+                                        {/* Header row */}
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-bold text-stone-800 dark:text-stone-100 truncate">{meal.name}</div>
+                                                <div className="text-xs text-stone-400 mt-0.5">{meal.items?.length || 0} item{meal.items?.length !== 1 ? 's' : ''}</div>
+                                            </div>
+                                            <div className="flex items-center gap-1 ml-3 shrink-0">
+                                                <button
+                                                    onClick={() => { haptic.light(); setEditingMeal(meal); setView('edit'); }}
+                                                    className="p-2 text-stone-300 hover:text-violet-500 dark:hover:text-violet-400 rounded-lg transition-colors active:scale-90">
+                                                    <Edit3 size={15} />
+                                                </button>
+                                                <button onClick={() => setConfirmDelete(meal.id)}
+                                                    className="p-2 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90">
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Macro badges */}
+                                        <div className="flex gap-2 mb-3">
+                                            <span className="text-xs bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2.5 py-1 rounded-lg font-medium">{t.protein}g protein</span>
+                                            <span className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-lg font-medium">{t.calories} cal</span>
+                                        </div>
+
+                                        {/* Items preview */}
+                                        {meal.items?.length > 0 && (
+                                            <div className="text-xs text-stone-400 mb-3 line-clamp-1">
+                                                {meal.items.map(i => i.name).join(' · ')}
+                                            </div>
+                                        )}
+
+                                        {/* Log button */}
+                                        <button
+                                            onClick={() => handleLog(meal)}
+                                            className="w-full py-2.5 bg-stone-800 dark:bg-stone-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-stone-700 dark:hover:bg-stone-600"
+                                        >
+                                            <Plus size={15} /> Log This Meal
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ── MEAL EDITOR — create or edit a saved meal ────────────────────────────────
+const MealEditor = ({ meal, recentFoods, onSave, onCancel }) => {
+    const isEdit = !!meal;
+    const [name, setName] = useState(meal?.name || '');
+    const [items, setItems] = useState(meal?.items ? [...meal.items] : []);
+    const [showFoodSearch, setShowFoodSearch] = useState(false);
+
+    const totals = useMemo(() => computeTotals(items), [items]);
+
+    const handleAddFoodToMeal = (food) => {
+        haptic.light();
+        setItems(prev => [...prev, {
+            name: food.name,
+            protein: safeInt(food.protein),
+            calories: safeInt(food.calories),
+        }]);
+        setShowFoodSearch(false);
+    };
+
+    const handleRemoveItem = (idx) => {
+        haptic.light();
+        setItems(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const handleSave = () => {
+        if (!name.trim() || items.length === 0) return;
+        haptic.success();
+        onSave({
+            ...(meal || {}),
+            name: name.trim(),
+            items,
+        });
+    };
+
+    const canSave = name.trim().length > 0 && items.length > 0;
+
+    return (
+        <div className="space-y-4 animate-fade-in">
+            {/* Back + title */}
+            <div className="flex items-center gap-2">
+                <button onClick={onCancel} className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 active:scale-90 transition-transform">
+                    <ChevronLeft size={20} />
+                </button>
+                <h4 className="font-bold text-stone-800 dark:text-stone-100 text-sm">{isEdit ? 'Edit Meal' : 'New Meal'}</h4>
+            </div>
+
+            {/* Meal name */}
+            <div>
+                <label className="text-xs text-stone-400 ml-1 block mb-1">Meal Name</label>
+                <input
+                    className="w-full p-3.5 bg-stone-50 dark:bg-stone-800 rounded-xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 font-bold outline-none"
+                    placeholder='e.g. "Post-Workout Shake"'
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    autoFocus={!isEdit}
+                />
+            </div>
+
+            {/* Items list */}
+            <div>
+                <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs text-stone-400 ml-1">Food Items</label>
+                    {items.length > 0 && (
+                        <span className="text-xs text-stone-400">{totals.protein}g · {totals.calories} cal</span>
+                    )}
+                </div>
+
+                {items.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-stone-400">
+                        No items yet — add foods below
+                    </div>
+                ) : (
+                    <div className="space-y-1.5 mb-2">
+                        {items.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-stone-50 dark:bg-stone-800 p-3 rounded-xl">
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium text-stone-700 dark:text-stone-200 truncate">{item.name}</div>
+                                    <div className="flex gap-2 mt-0.5">
+                                        {item.protein > 0 && <span className="text-[10px] text-violet-600 dark:text-violet-300 font-medium">{item.protein}g pro</span>}
+                                        {item.calories > 0 && <span className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">{item.calories} cal</span>}
+                                    </div>
+                                </div>
+                                <button onClick={() => handleRemoveItem(idx)}
+                                    className="p-1.5 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90 ml-2 shrink-0">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Add food to meal */}
+                {showFoodSearch ? (
+                    <InlineFoodSearch
+                        recentFoods={recentFoods}
+                        onSelect={handleAddFoodToMeal}
+                        onClose={() => setShowFoodSearch(false)}
+                    />
+                ) : (
+                    <button
+                        onClick={() => setShowFoodSearch(true)}
+                        className="w-full py-2.5 border border-dashed border-stone-200 dark:border-stone-700 rounded-xl text-stone-400 font-medium text-xs flex items-center justify-center gap-1.5 hover:border-violet-300 dark:hover:border-violet-700 hover:text-violet-500 transition-all active:scale-[0.98]"
+                    >
+                        <Plus size={13} /> Add Food Item
+                    </button>
+                )}
+            </div>
+
+            {/* Save */}
+            <button
+                onClick={handleSave}
+                disabled={!canSave}
+                className="w-full py-3.5 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+                <Save size={15} /> {isEdit ? 'Save Changes' : 'Save Meal'}
+            </button>
+        </div>
+    );
+};
+
+// ── INLINE FOOD SEARCH — used inside the meal editor ─────────────────────────
+const InlineFoodSearch = ({ recentFoods, onSelect, onClose }) => {
+    const [query, setQuery] = useState('');
+    const [customMode, setCustomMode] = useState(false);
+    const [custom, setCustom] = useState({ name: '', protein: '', calories: '' });
+    const inputRef = useRef(null);
+
+    useEffect(() => { inputRef.current?.focus(); }, []);
+
+    const results = useMemo(() => {
+        if (!query || query.length < 1) return [];
+        const all = [...(recentFoods || []), ...FOOD_LIBRARY];
+        const unique = Array.from(new Map(all.map(f => [f.name, f])).values());
+        return unique.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
+    }, [query, recentFoods]);
+
+    const handleCustomAdd = () => {
+        if (!custom.name.trim()) return;
+        onSelect({ name: custom.name.trim(), protein: safeInt(custom.protein), calories: safeInt(custom.calories) });
+    };
+
+    return (
+        <div className="bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
+            {/* Toggle */}
+            <div className="flex border-b border-stone-100 dark:border-stone-700">
+                <button onClick={() => setCustomMode(false)}
+                    className={`flex-1 py-2 text-xs font-bold transition-colors ${!customMode ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>
+                    Search
+                </button>
+                <button onClick={() => setCustomMode(true)}
+                    className={`flex-1 py-2 text-xs font-bold transition-colors ${customMode ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>
+                    Custom
+                </button>
+            </div>
+
+            {!customMode ? (
+                <div className="p-2 space-y-1">
+                    <div className="relative">
+                        <input
+                            ref={inputRef}
+                            className="w-full p-2.5 pl-8 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                            placeholder="Search food..."
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                        />
+                        <Search size={14} className="absolute left-2.5 top-3 text-stone-400" />
+                    </div>
+                    {results.length > 0 && (
+                        <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                            {results.map((item, i) => (
+                                <button key={i} onClick={() => onSelect(item)}
+                                    className="w-full flex justify-between items-center p-2.5 text-left hover:bg-white dark:hover:bg-stone-900 rounded-lg transition-colors active:scale-[0.98]">
+                                    <span className="text-sm text-stone-700 dark:text-stone-200 font-medium truncate flex-1">{item.name}</span>
+                                    <span className="text-xs text-stone-400 shrink-0 ml-2">{item.protein}g · {item.calories}c</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {query.length > 1 && results.length === 0 && (
+                        <p className="text-xs text-stone-400 text-center py-2">No match — try Custom tab</p>
+                    )}
+                </div>
+            ) : (
+                <div className="p-2 space-y-2">
+                    <input
+                        className="w-full p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                        placeholder="Food name"
+                        value={custom.name}
+                        onChange={e => setCustom(c => ({ ...c, name: e.target.value }))}
+                        autoFocus
+                    />
+                    <div className="flex gap-2">
+                        <input type="number" inputMode="numeric"
+                            className="flex-1 p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                            placeholder="Protein (g)"
+                            value={custom.protein}
+                            onChange={e => setCustom(c => ({ ...c, protein: e.target.value }))}
+                        />
+                        <input type="number" inputMode="numeric"
+                            className="flex-1 p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                            placeholder="Calories"
+                            value={custom.calories}
+                            onChange={e => setCustom(c => ({ ...c, calories: e.target.value }))}
+                        />
+                    </div>
+                    <button
+                        onClick={handleCustomAdd}
+                        disabled={!custom.name.trim()}
+                        className="w-full py-2 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-lg text-xs disabled:opacity-40 active:scale-[0.98] transition-transform"
+                    >
+                        Add Item
+                    </button>
+                </div>
+            )}
+
+            {/* Cancel */}
+            <div className="px-2 pb-2">
+                <button onClick={onClose}
+                    className="w-full py-1.5 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+};
+
 // --- COMPONENTS ---
 
 const WeightUpdateModal = ({ isOpen, onClose, currentWeight, onUpdate }) => {
@@ -529,11 +887,8 @@ const WeightUpdateModal = ({ isOpen, onClose, currentWeight, onUpdate }) => {
                 <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">Updating your weight keeps your calorie targets accurate.</p>
                 <div className="mb-6 relative">
                     <input 
-                        type="number" 
-                        inputMode="numeric" 
-                        pattern="[0-9]*" 
-                        value={weight} 
-                        onChange={(e) => setWeight(e.target.value)} 
+                        type="number" inputMode="numeric" pattern="[0-9]*" 
+                        value={weight} onChange={(e) => setWeight(e.target.value)} 
                         className="w-full p-4 text-center text-2xl font-bold bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" 
                         autoFocus 
                     />
@@ -649,53 +1004,27 @@ const SupportView = ({ onBack }) => {
 
 const InsightCard = ({ proteinRemaining, caloriesOver, caloriesRemaining, proteinTarget }) => {
     const hoursLeft = 24 - new Date().getHours();
-    
     let insight = null;
 
-    // Priority 1 — meaningfully over on calories (teaching moment)
     if (caloriesOver >= 200) {
         const isAlsoProteinDone = proteinRemaining <= 0;
         insight = {
-            type: 'over',
-            icon: TrendingUp,
+            type: 'over', icon: TrendingUp,
             title: `${caloriesOver} cal over today`,
             message: isAlsoProteinDone
                 ? `Protein goal done though — that's the important win. One day over won't derail you.`
                 : `Worth knowing for next time. Protein is still ${proteinRemaining}g short — prioritise that tomorrow.`,
         };
-    // Priority 2 — slightly over (gentle nudge, not alarm)
     } else if (caloriesOver > 0 && caloriesOver < 200) {
-        insight = {
-            type: 'nudge',
-            icon: AlertCircle,
-            title: `${caloriesOver} cal over`,
-            message: `Just a small overage — totally manageable. Stay consistent and it evens out.`,
-        };
-    // Priority 3 — protein done, calories budget left
+        insight = { type: 'nudge', icon: AlertCircle, title: `${caloriesOver} cal over`, message: `Just a small overage — totally manageable. Stay consistent and it evens out.` };
     } else if (proteinRemaining <= 0 && caloriesRemaining > 200) {
-        insight = {
-            type: 'success',
-            icon: Sparkles,
-            title: 'Protein goal hit! 🎉',
-            message: `You still have ${caloriesRemaining} cal left if you want a snack or treat.`,
-        };
-    // Priority 4 — almost at protein goal
+        insight = { type: 'success', icon: Sparkles, title: 'Protein goal hit! 🎉', message: `You still have ${caloriesRemaining} cal left if you want a snack or treat.` };
     } else if (proteinRemaining > 0 && proteinRemaining <= 20) {
-        insight = {
-            type: 'close',
-            icon: Target,
-            title: 'Almost there!',
-            message: `Just ${proteinRemaining}g more protein. A Greek yogurt or a couple of eggs would do it.`,
-        };
-    // Priority 5 — running out of day with a big protein gap
+        insight = { type: 'close', icon: Target, title: 'Almost there!', message: `Just ${proteinRemaining}g more protein. A Greek yogurt or a couple of eggs would do it.` };
     } else if (proteinRemaining > 30 && hoursLeft < 6) {
-        const suggestions = FOOD_LIBRARY
-            .filter(f => f.protein >= 20)
-            .sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories))
-            .slice(0, 2);
+        const suggestions = FOOD_LIBRARY.filter(f => f.protein >= 20).sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories)).slice(0, 2);
         insight = {
-            type: 'warning',
-            icon: AlertCircle,
+            type: 'warning', icon: AlertCircle,
             title: `${proteinRemaining}g protein to go`,
             message: `${hoursLeft} hours left today. Quick wins:`,
             suggestions: suggestions.map(s => `${s.name} (${s.protein}g)`),
@@ -705,18 +1034,18 @@ const InsightCard = ({ proteinRemaining, caloriesOver, caloriesRemaining, protei
     if (!insight) return null;
 
     const colors = {
-        over:    'bg-red-50    dark:bg-red-900/20    border-red-100    dark:border-red-800',
-        nudge:   'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800',
-        warning: 'bg-amber-50  dark:bg-amber-900/20  border-amber-100  dark:border-amber-800',
+        over: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800',
+        nudge: 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800',
+        warning: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800',
         success: 'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800',
-        close:   'bg-blue-50   dark:bg-blue-900/20   border-blue-100   dark:border-blue-800',
+        close: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800',
     };
     const iconColors = {
-        over:    'text-red-500    dark:text-red-400',
-        nudge:   'text-orange-500 dark:text-orange-400',
-        warning: 'text-amber-600  dark:text-amber-400',
+        over: 'text-red-500 dark:text-red-400',
+        nudge: 'text-orange-500 dark:text-orange-400',
+        warning: 'text-amber-600 dark:text-amber-400',
         success: 'text-violet-600 dark:text-violet-300',
-        close:   'text-blue-600   dark:text-blue-400',
+        close: 'text-blue-600 dark:text-blue-400',
     };
 
     return (
@@ -755,8 +1084,6 @@ const QuickLogSection = ({ yesterdayItems, onCopyYesterday }) => {
     );
 };
 
-
-// ── MY FOODS — edit / delete custom saved foods ─────────────────────────────
 const MyFoodsView = ({ onBack, onFoodsChanged }) => {
     const [foods, setFoods] = useState(DB.getRecentFoods());
     const [editing, setEditing] = useState(null);
@@ -772,8 +1099,8 @@ const MyFoodsView = ({ onBack, onFoodsChanged }) => {
         if (!editing.name.trim()) return;
         haptic.success();
         DB.updateRecentFood(editing.originalName, {
-            name:     editing.name.trim(),
-            protein:  safeInt(editing.protein),
+            name: editing.name.trim(),
+            protein: safeInt(editing.protein),
             calories: safeInt(editing.calories),
         });
         setEditing(null);
@@ -797,7 +1124,6 @@ const MyFoodsView = ({ onBack, onFoodsChanged }) => {
                 </button>
                 <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100">My Foods</h2>
             </div>
-
             {foods.length === 0 ? (
                 <div className="text-center py-12">
                     <div className="w-12 h-12 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -812,39 +1138,28 @@ const MyFoodsView = ({ onBack, onFoodsChanged }) => {
                         <div key={idx} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 overflow-hidden">
                             {editing?.originalName === food.name ? (
                                 <div className="p-4 space-y-3">
-                                    <input
-                                        className={inp}
-                                        value={editing.name}
-                                        placeholder="Food name"
+                                    <input className={inp} value={editing.name} placeholder="Food name"
                                         onChange={e => setEditing({ ...editing, name: e.target.value })}
-                                        onKeyDown={e => e.key === 'Enter' && handleSaveEdit()}
-                                        autoFocus
-                                    />
+                                        onKeyDown={e => e.key === 'Enter' && handleSaveEdit()} autoFocus />
                                     <div className="flex gap-2">
                                         <div className="flex-1">
                                             <label className="text-[10px] text-stone-400 uppercase tracking-wider font-bold ml-1">Protein (g)</label>
                                             <input type="number" inputMode="numeric" className={inp}
-                                                value={editing.protein}
-                                                onChange={e => setEditing({ ...editing, protein: e.target.value })}
+                                                value={editing.protein} onChange={e => setEditing({ ...editing, protein: e.target.value })}
                                                 onKeyDown={e => e.key === 'Enter' && handleSaveEdit()} />
                                         </div>
                                         <div className="flex-1">
                                             <label className="text-[10px] text-stone-400 uppercase tracking-wider font-bold ml-1">Calories</label>
                                             <input type="number" inputMode="numeric" className={inp}
-                                                value={editing.calories}
-                                                onChange={e => setEditing({ ...editing, calories: e.target.value })}
+                                                value={editing.calories} onChange={e => setEditing({ ...editing, calories: e.target.value })}
                                                 onKeyDown={e => e.key === 'Enter' && handleSaveEdit()} />
                                         </div>
                                     </div>
                                     <div className="flex gap-2 pt-1">
                                         <button onClick={() => setEditing(null)}
-                                            className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                                            Cancel
-                                        </button>
+                                            className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-sm active:scale-95 transition-transform">Cancel</button>
                                         <button onClick={handleSaveEdit}
-                                            className="flex-1 py-2.5 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                                            Save
-                                        </button>
+                                            className="flex-1 py-2.5 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">Save</button>
                                     </div>
                                 </div>
                             ) : confirmDelete === food.name ? (
@@ -853,13 +1168,9 @@ const MyFoodsView = ({ onBack, onFoodsChanged }) => {
                                     <p className="text-xs text-stone-400 mb-3">Won't be suggested when logging. Past logs are unaffected.</p>
                                     <div className="flex gap-2">
                                         <button onClick={() => setConfirmDelete(null)}
-                                            className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                                            Keep
-                                        </button>
+                                            className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-sm active:scale-95 transition-transform">Keep</button>
                                         <button onClick={() => handleDelete(food.name)}
-                                            className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                                            Remove
-                                        </button>
+                                            className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">Remove</button>
                                     </div>
                                 </div>
                             ) : (
@@ -872,8 +1183,7 @@ const MyFoodsView = ({ onBack, onFoodsChanged }) => {
                                         </div>
                                     </div>
                                     <div className="flex gap-1 ml-3 shrink-0">
-                                        <button
-                                            onClick={() => setEditing({ originalName: food.name, name: food.name, protein: food.protein, calories: food.calories })}
+                                        <button onClick={() => setEditing({ originalName: food.name, name: food.name, protein: food.protein, calories: food.calories })}
                                             className="p-2 text-stone-300 hover:text-violet-500 dark:hover:text-violet-400 rounded-lg transition-colors active:scale-90">
                                             <Edit3 size={15} />
                                         </button>
@@ -905,12 +1215,8 @@ const ConfirmResetModal = ({ isOpen, onConfirm, onCancel }) => {
                     This permanently deletes your profile, food logs, and weight history from this device. There's no undo.
                 </p>
                 <div className="flex gap-3">
-                    <button onClick={onCancel} className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors active:scale-95">
-                        Cancel
-                    </button>
-                    <button onClick={onConfirm} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors active:scale-95">
-                        Yes, Reset
-                    </button>
+                    <button onClick={onCancel} className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors active:scale-95">Cancel</button>
+                    <button onClick={onConfirm} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors active:scale-95">Yes, Reset</button>
                 </div>
             </div>
         </div>
@@ -932,10 +1238,7 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
     const fileInputRef = useRef(null);
 
     if (showMyFoods) return (
-        <MyFoodsView
-            onBack={() => setShowMyFoods(false)}
-            onFoodsChanged={onFoodsChanged}
-        />
+        <MyFoodsView onBack={() => setShowMyFoods(false)} onFoodsChanged={onFoodsChanged} />
     );
 
     const handleSave = async () => {
@@ -952,29 +1255,17 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
         haptic.success();
     };
 
-    const handleExport = () => {
-        haptic.light();
-        DB.downloadExport();
-        trackEvent('export_csv', { date: selectedDate });
-    };
+    const handleExport = () => { haptic.light(); DB.downloadExport(); };
 
     const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = (event) => {
             const result = DB.importData(event.target.result);
             setImportStatus(result);
-            if (result.success) {
-                haptic.success();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                haptic.error();
-                setTimeout(() => setImportStatus(null), 3000);
-            }
+            if (result.success) { haptic.success(); setTimeout(() => window.location.reload(), 1500); }
+            else { haptic.error(); setTimeout(() => setImportStatus(null), 3000); }
         };
         reader.readAsText(file);
         e.target.value = '';
@@ -1024,17 +1315,10 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
                     <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors active:scale-95 flex items-center justify-center gap-2">
                         <Upload size={18} /> Import
                     </button>
-                    <input 
-                        ref={fileInputRef}
-                        type="file" 
-                        accept=".json,application/json" 
-                        onChange={handleFileSelect}
-                        className="hidden" 
-                    />
+                    <input ref={fileInputRef} type="file" accept=".json,application/json" onChange={handleFileSelect} className="hidden" />
                 </div>
             </div>
 
-            {/* My Foods */}
             <button onClick={() => { haptic.light(); setShowMyFoods(true); }} className="w-full bg-white dark:bg-stone-900 p-5 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm flex items-center justify-between group active:scale-[0.98] transition-transform">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-600 dark:text-stone-400">
@@ -1084,38 +1368,20 @@ const SettingsView = ({ profile, onUpdate, onLogout, toggleTheme, isDark, onNavi
                 </button>
             </div>
 
-            <ConfirmResetModal
-                isOpen={showResetConfirm}
-                onCancel={() => setShowResetConfirm(false)}
-                onConfirm={() => { haptic.error(); onLogout(); }}
-            />
+            <ConfirmResetModal isOpen={showResetConfirm} onCancel={() => setShowResetConfirm(false)} onConfirm={() => { haptic.error(); onLogout(); }} />
         </div>
     );
 };
 
+// ── ONBOARDING ───────────────────────────────────────────────────────────────
+const ONBOARD_TOTAL = 7;
 
-// ── ONBOARDING ──────────────────────────────────────────────────────────────
-// One focused question per step — reduces mobile drop-off.
-// Steps: 0=Welcome  1=Weight  2=Height  3=Age+Sex  4=Goal  5=Activity  6=Training  7=Blueprint
-
-// ── ONBOARDING — single container, slides between steps, custom numpad ───────
-// No system keyboard on numeric steps = zero layout jump.
-// All steps live in one mounted div; content slides with CSS transform.
-
-const ONBOARD_TOTAL = 7; // steps 1-7 (0 = welcome splash)
-
-// Custom numeric keypad — shown instead of system keyboard on number steps
 const NumPad = ({ value, onChange, onNext, nextDisabled, hint }) => {
     const tap = (k) => {
         haptic.light();
-        if (k === '⌫') {
-            onChange(value.slice(0, -1));
-        } else if (k === '→') {
-            if (!nextDisabled) onNext();
-        } else {
-            // Max 4 digits (999.9 lbs / inches / years is plenty)
-            if (value.length < 4) onChange(value + k);
-        }
+        if (k === '⌫') { onChange(value.slice(0, -1)); }
+        else if (k === '→') { if (!nextDisabled) onNext(); }
+        else { if (value.length < 4) onChange(value + k); }
     };
 
     const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','→'];
@@ -1123,32 +1389,26 @@ const NumPad = ({ value, onChange, onNext, nextDisabled, hint }) => {
 
     return (
         <div className="flex flex-col items-center w-full">
-            {/* Big display */}
             <div className="w-full bg-stone-50 dark:bg-stone-800 rounded-2xl px-6 py-5 flex items-center justify-between mb-2">
                 <span className={`text-5xl font-extrabold tracking-tight transition-all ${displayVal ? 'text-stone-800 dark:text-stone-100' : 'text-stone-300 dark:text-stone-600'}`}>
                     {displayVal || '—'}
                 </span>
                 {hint && <span className="text-sm text-stone-400 font-medium">{hint}</span>}
             </div>
-            {/* Keypad grid */}
             <div className="grid grid-cols-3 gap-2 w-full mt-1">
                 {keys.map(k => {
-                    const isNext    = k === '→';
-                    const isBack    = k === '⌫';
+                    const isNext = k === '→';
+                    const isBack = k === '⌫';
                     const nextReady = isNext && !nextDisabled;
                     return (
-                        <button
-                            key={k}
-                            onClick={() => tap(k)}
-                            disabled={isNext && nextDisabled}
+                        <button key={k} onClick={() => tap(k)} disabled={isNext && nextDisabled}
                             className={`py-4 rounded-2xl text-xl font-bold transition-all active:scale-[0.93] select-none
                                 ${isNext && nextDisabled ? 'bg-stone-100 dark:bg-stone-800 text-stone-300 dark:text-stone-600 cursor-not-allowed' :
-                                  nextReady              ? 'bg-stone-800 dark:bg-stone-700 text-white shadow-lg active:bg-stone-700' :
-                                  isBack                 ? 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300' :
-                                                           'bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 text-stone-800 dark:text-stone-100 shadow-sm'
-                                }`}
-                        >
-                            {isNext ? (nextDisabled ? '→' : '→') : k}
+                                  nextReady ? 'bg-stone-800 dark:bg-stone-700 text-white shadow-lg active:bg-stone-700' :
+                                  isBack ? 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300' :
+                                  'bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 text-stone-800 dark:text-stone-100 shadow-sm'
+                                }`}>
+                            {k}
                         </button>
                     );
                 })}
@@ -1159,8 +1419,8 @@ const NumPad = ({ value, onChange, onNext, nextDisabled, hint }) => {
 
 const Onboarding = ({ onComplete }) => {
     const [step, setStep] = useState(0);
-    const [dir,  setDir]  = useState(1);   // 1 = forward, -1 = backward
-    const [animKey, setAnimKey] = useState(0); // triggers re-animation
+    const [dir, setDir] = useState(1);
+    const [animKey, setAnimKey] = useState(0);
     const [form, setForm] = useState({
         currentWeight: '', goalWeight: '', age: '',
         heightFt: '', heightIn: '', sex: 'female',
@@ -1169,62 +1429,45 @@ const Onboarding = ({ onComplete }) => {
     });
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-    const go = (delta) => {
-        haptic[delta > 0 ? 'medium' : 'light']();
-        setDir(delta);
-        setAnimKey(k => k + 1);
-        setStep(s => s + delta);
-    };
+    const go = (delta) => { haptic[delta > 0 ? 'medium' : 'light'](); setDir(delta); setAnimKey(k => k + 1); setStep(s => s + delta); };
     const next = () => go(1);
     const back = () => go(-1);
-    const set  = (patch) => setForm(f => ({ ...f, ...patch }));
+    const set = (patch) => setForm(f => ({ ...f, ...patch }));
 
     const calc = useMemo(() => {
-        const w  = safeInt(form.currentWeight);
+        const w = safeInt(form.currentWeight);
         const hi = (safeInt(form.heightFt) * 12) + safeInt(form.heightIn);
-        const a  = safeInt(form.age);
+        const a = safeInt(form.age);
         if (!w || !hi || !a) return { calories: 0, proteinTarget: 0, proteinMin: 0, proteinMax: 0, water: 0 };
-        const bmr  = calculateBMR(w, hi, a, form.sex);
-        const cal  = calculateCalorieGoal(bmr, form.activity, w, form.goalWeight);
+        const bmr = calculateBMR(w, hi, a, form.sex);
+        const cal = calculateCalorieGoal(bmr, form.activity, w, form.goalWeight);
         const prec = recommendProtein(w, hi, form.goalWeight, form.strengthTrainingLevel);
         return { calories: cal, proteinTarget: prec.target, proteinMin: prec.min, proteinMax: prec.max, water: Math.round(w / 2) };
     }, [form]);
 
     const healthyRange = useMemo(() => suggestHealthyRange(form.heightFt, form.heightIn), [form.heightFt, form.heightIn]);
-    const suggestion   = useMemo(() => suggestTargetWeight(safeInt(form.currentWeight), form.heightFt, form.heightIn), [form.currentWeight, form.heightFt, form.heightIn]);
+    const suggestion = useMemo(() => suggestTargetWeight(safeInt(form.currentWeight), form.heightFt, form.heightIn), [form.currentWeight, form.heightFt, form.heightIn]);
 
-    // Slide animation class based on direction
     const slideClass = dir > 0 ? 'animate-slide-from-right' : 'animate-slide-from-left';
 
-    // Progress dots (steps 1-7)
     const ProgressDots = () => step === 0 ? null : (
         <div className="flex gap-1.5 px-6 pt-5 pb-2 flex-shrink-0">
             {Array.from({ length: ONBOARD_TOTAL }).map((_, i) => (
-                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-400 ${
-                    i < step - 1  ? 'bg-violet-500' :
-                    i === step - 1 ? 'bg-violet-400' :
-                    'bg-stone-200 dark:bg-stone-700'
-                }`} />
+                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-400 ${i < step - 1 ? 'bg-violet-500' : i === step - 1 ? 'bg-violet-400' : 'bg-stone-200 dark:bg-stone-700'}`} />
             ))}
         </div>
     );
 
-    // Shared footer with Back + Next buttons
     const Footer = ({ onNext, nextDisabled, nextLabel = 'Continue', last, skipLabel, onSkip }) => (
         <div className="px-6 pb-8 pt-3 flex-shrink-0 space-y-2">
             <div className="flex gap-3">
                 {step > 0 && (
-                    <button onClick={back}
-                        className="w-12 h-14 flex items-center justify-center bg-stone-100 dark:bg-stone-800 rounded-2xl text-stone-500 active:scale-95 transition-transform flex-shrink-0">
+                    <button onClick={back} className="w-12 h-14 flex items-center justify-center bg-stone-100 dark:bg-stone-800 rounded-2xl text-stone-500 active:scale-95 transition-transform flex-shrink-0">
                         <ChevronLeft size={22} />
                     </button>
                 )}
                 <button onClick={onNext} disabled={nextDisabled}
-                    className={`flex-1 h-14 font-bold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg ${
-                        last
-                        ? 'bg-violet-600 text-white shadow-violet-200 dark:shadow-none'
-                        : 'bg-stone-800 dark:bg-stone-700 text-white shadow-stone-200 dark:shadow-none'
-                    }`}>
+                    className={`flex-1 h-14 font-bold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg ${last ? 'bg-violet-600 text-white shadow-violet-200 dark:shadow-none' : 'bg-stone-800 dark:bg-stone-700 text-white shadow-stone-200 dark:shadow-none'}`}>
                     {nextLabel} {!last && <ArrowRight size={18} />}
                 </button>
             </div>
@@ -1236,7 +1479,6 @@ const Onboarding = ({ onComplete }) => {
         </div>
     );
 
-    // ── Step 0: Welcome splash ───────────────────────────────────────────────
     if (step === 0) return (
         <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-violet-600 to-teal-500 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-violet-200 dark:shadow-none">
@@ -1246,9 +1488,9 @@ const Onboarding = ({ onComplete }) => {
             <h1 className="text-4xl font-extrabold text-stone-800 dark:text-stone-100 mt-1 mb-8">Steady</h1>
             <div className="w-full text-left space-y-4 text-sm mb-10 bg-stone-50 dark:bg-stone-800 p-6 rounded-2xl border border-stone-100 dark:border-stone-700">
                 {[
-                    { n:1, color:'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300',    bold:'Evidence-based.',     desc:'Scientific formulas, real safety guardrails.' },
+                    { n:1, color:'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300', bold:'Evidence-based.', desc:'Scientific formulas, real safety guardrails.' },
                     { n:2, color:'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', bold:'No database needed.', desc:'Log what you know. Learn what you eat.' },
-                    { n:3, color:'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300',    bold:"You're in control.",  desc:'Starting points, not a contract.' },
+                    { n:3, color:'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300', bold:"You're in control.", desc:'Starting points, not a contract.' },
                 ].map(({ n, color, bold, desc }) => (
                     <div key={n} className="flex gap-3">
                         <div className={`mt-0.5 ${color} w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0`}>{n}</div>
@@ -1262,73 +1504,43 @@ const Onboarding = ({ onComplete }) => {
         </div>
     );
 
-    // Steps 1-7 share one mounted container — no remounting, no keyboard jump
     return (
         <div className="w-full h-full flex flex-col bg-white dark:bg-stone-900 overflow-hidden">
             <ProgressDots />
-
-            {/* Sliding content area */}
             <div key={animKey} className={`flex-1 overflow-y-auto overflow-x-hidden ${slideClass}`}>
-
-                {/* ── Step 1: Current weight ── */}
                 {step === 1 && (
                     <div className="px-6 pt-4 pb-2 space-y-6">
                         <div>
                             <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">What do you weigh?</h2>
                             <p className="text-sm text-stone-400">Just your starting point — no judgment here.</p>
                         </div>
-                        <NumPad
-                            value={form.currentWeight}
-                            onChange={v => set({ currentWeight: v })}
-                            onNext={next}
-                            nextDisabled={safeInt(form.currentWeight) <= 0}
-                            hint="lbs"
-                        />
+                        <NumPad value={form.currentWeight} onChange={v => set({ currentWeight: v })} onNext={next} nextDisabled={safeInt(form.currentWeight) <= 0} hint="lbs" />
                     </div>
                 )}
-
-                {/* ── Step 2: Height ── */}
                 {step === 2 && (
                     <div className="px-6 pt-4 pb-2 space-y-5">
                         <div>
                             <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">How tall are you?</h2>
                             <p className="text-sm text-stone-400">Used to calculate your targets accurately.</p>
                         </div>
-                        {/* Two-field height — ft then in, each with its own mini numpad */}
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Feet</label>
-                                <NumPad
-                                    value={form.heightFt}
-                                    onChange={v => set({ heightFt: v })}
-                                    onNext={() => {}}
-                                    nextDisabled={true}
-                                    hint="ft"
-                                />
+                                <NumPad value={form.heightFt} onChange={v => set({ heightFt: v })} onNext={() => {}} nextDisabled={true} hint="ft" />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Inches</label>
-                                <NumPad
-                                    value={form.heightIn}
-                                    onChange={v => { if (safeInt(v) <= 11) set({ heightIn: v }); }}
-                                    onNext={next}
-                                    nextDisabled={safeInt(form.heightFt) <= 0}
-                                    hint="in"
-                                />
+                                <NumPad value={form.heightIn} onChange={v => { if (safeInt(v) <= 11) set({ heightIn: v }); }} onNext={next} nextDisabled={safeInt(form.heightFt) <= 0} hint="in" />
                             </div>
                             {healthyRange && (
                                 <div className="p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex gap-2 items-start">
                                     <Info size={14} className="text-violet-500 shrink-0 mt-0.5" />
-                                    <p className="text-xs text-violet-700 dark:text-violet-300">
-                                        Healthy range for your height: <strong>{healthyRange.min}–{healthyRange.max} lbs</strong>
-                                    </p>
+                                    <p className="text-xs text-violet-700 dark:text-violet-300">Healthy range for your height: <strong>{healthyRange.min}–{healthyRange.max} lbs</strong></p>
                                 </div>
                             )}
                         </div>
                     </div>
                 )}
-
-                {/* ── Step 3: Age & Sex ── */}
                 {step === 3 && (
                     <div className="px-6 pt-4 pb-2 space-y-5">
                         <div>
@@ -1337,24 +1549,14 @@ const Onboarding = ({ onComplete }) => {
                         </div>
                         <div>
                             <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Age</label>
-                            <NumPad
-                                value={form.age}
-                                onChange={v => set({ age: v })}
-                                onNext={next}
-                                nextDisabled={safeInt(form.age) <= 0}
-                                hint="years"
-                            />
+                            <NumPad value={form.age} onChange={v => set({ age: v })} onNext={next} nextDisabled={safeInt(form.age) <= 0} hint="years" />
                         </div>
                         <div>
                             <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block mb-2">Biological Sex</label>
                             <div className="flex gap-3">
                                 {['female','male'].map(s => (
                                     <button key={s} onClick={() => { haptic.light(); set({ sex: s }); }}
-                                        className={`flex-1 py-4 rounded-2xl font-bold text-sm border-2 transition-all active:scale-95 ${
-                                            form.sex === s
-                                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-                                            : 'border-stone-100 dark:border-stone-700 text-stone-500 bg-stone-50 dark:bg-stone-800'
-                                        }`}>
+                                        className={`flex-1 py-4 rounded-2xl font-bold text-sm border-2 transition-all active:scale-95 ${form.sex === s ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300' : 'border-stone-100 dark:border-stone-700 text-stone-500 bg-stone-50 dark:bg-stone-800'}`}>
                                         {s === 'female' ? 'Female' : 'Male'}
                                     </button>
                                 ))}
@@ -1362,21 +1564,13 @@ const Onboarding = ({ onComplete }) => {
                         </div>
                     </div>
                 )}
-
-                {/* ── Step 4: Goal weight ── */}
                 {step === 4 && (
                     <div className="px-6 pt-4 pb-2 space-y-5">
                         <div>
                             <h2 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mb-1">Where are you headed?</h2>
                             <p className="text-sm text-stone-400">Your target weight shapes your calorie math.</p>
                         </div>
-                        <NumPad
-                            value={form.goalWeight}
-                            onChange={v => set({ goalWeight: v })}
-                            onNext={next}
-                            nextDisabled={false}
-                            hint="lbs"
-                        />
+                        <NumPad value={form.goalWeight} onChange={v => set({ goalWeight: v })} onNext={next} nextDisabled={false} hint="lbs" />
                         {suggestion && !form.goalWeight && (
                             <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex gap-2 items-center">
                                 <Lightbulb size={14} className="text-indigo-500 shrink-0" />
@@ -1391,8 +1585,6 @@ const Onboarding = ({ onComplete }) => {
                         )}
                     </div>
                 )}
-
-                {/* ── Step 5: Activity ── */}
                 {step === 5 && (
                     <div className="px-6 pt-4 pb-2 space-y-4">
                         <div>
@@ -1401,17 +1593,13 @@ const Onboarding = ({ onComplete }) => {
                         </div>
                         <div className="space-y-3">
                             {[
-                                { val:'sedentary', label:'Mostly sitting',    desc:'Desk job, minimal walking' },
-                                { val:'light',     label:'Lightly active',    desc:'Some walking, on feet part of the day' },
-                                { val:'moderate',  label:'Moderately active', desc:'On feet most of the day' },
-                                { val:'active',    label:'Very active',       desc:'Physical job or active all day' },
+                                { val:'sedentary', label:'Mostly sitting', desc:'Desk job, minimal walking' },
+                                { val:'light', label:'Lightly active', desc:'Some walking, on feet part of the day' },
+                                { val:'moderate', label:'Moderately active', desc:'On feet most of the day' },
+                                { val:'active', label:'Very active', desc:'Physical job or active all day' },
                             ].map(({ val, label, desc }) => (
                                 <button key={val} onClick={() => { haptic.light(); set({ activity: val }); }}
-                                    className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
-                                        form.activity === val
-                                        ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
-                                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
-                                    }`}>
+                                    className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${form.activity === val ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30' : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'}`}>
                                     <span className={`block font-bold text-sm ${form.activity === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
                                     <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
                                 </button>
@@ -1419,8 +1607,6 @@ const Onboarding = ({ onComplete }) => {
                         </div>
                     </div>
                 )}
-
-                {/* ── Step 6: Strength training ── */}
                 {step === 6 && (
                     <div className="px-6 pt-4 pb-2 space-y-4">
                         <div>
@@ -1429,16 +1615,12 @@ const Onboarding = ({ onComplete }) => {
                         </div>
                         <div className="space-y-3">
                             {[
-                                { val:'not_yet',   label:'Not really',        desc:"I'm starting simple." },
-                                { val:'sometimes', label:'Sometimes',         desc:'A few times a month.' },
-                                { val:'regular',   label:'Yes, 2+ days/week', desc:'This is part of my routine.' },
+                                { val:'not_yet', label:'Not really', desc:"I'm starting simple." },
+                                { val:'sometimes', label:'Sometimes', desc:'A few times a month.' },
+                                { val:'regular', label:'Yes, 2+ days/week', desc:'This is part of my routine.' },
                             ].map(({ val, label, desc }) => (
                                 <button key={val} onClick={() => { haptic.light(); set({ strengthTrainingLevel: val }); }}
-                                    className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
-                                        form.strengthTrainingLevel === val
-                                        ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
-                                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'
-                                    }`}>
+                                    className={`w-full p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${form.strengthTrainingLevel === val ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30' : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900'}`}>
                                     <span className={`block font-bold text-sm ${form.strengthTrainingLevel === val ? 'text-violet-800 dark:text-violet-200' : 'text-stone-800 dark:text-stone-100'}`}>{label}</span>
                                     <span className="text-xs text-stone-500 dark:text-stone-400">{desc}</span>
                                 </button>
@@ -1446,8 +1628,6 @@ const Onboarding = ({ onComplete }) => {
                         </div>
                     </div>
                 )}
-
-                {/* ── Step 7: Blueprint ── */}
                 {step === 7 && (
                     <div className="px-6 pt-4 pb-2 space-y-4">
                         <div>
@@ -1456,9 +1636,9 @@ const Onboarding = ({ onComplete }) => {
                         </div>
                         <div className="space-y-3">
                             {[
-                                { icon:Utensils, label:'Protein',  val:`${calc.proteinTarget}g`, sub:`Range: ${calc.proteinMin}–${calc.proteinMax}g`, card:'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800', ic:'text-teal-700 dark:text-teal-300', vc:'text-violet-900 dark:text-violet-200' },
-                                { icon:Flame,    label:'Calories', val:`${calc.calories}`,        sub:'Daily target',                                  card:'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800', ic:'text-orange-600 dark:text-orange-400', vc:'text-orange-900 dark:text-orange-200' },
-                                { icon:Droplet,  label:'Water',    val:`${calc.water}oz`,         sub:'Half your weight in oz',                        card:'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-100 dark:border-cyan-800',       ic:'text-cyan-700 dark:text-cyan-400',   vc:'text-cyan-900 dark:text-cyan-200' },
+                                { icon:Utensils, label:'Protein', val:`${calc.proteinTarget}g`, sub:`Range: ${calc.proteinMin}–${calc.proteinMax}g`, card:'bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800', ic:'text-teal-700 dark:text-teal-300', vc:'text-violet-900 dark:text-violet-200' },
+                                { icon:Flame, label:'Calories', val:`${calc.calories}`, sub:'Daily target', card:'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800', ic:'text-orange-600 dark:text-orange-400', vc:'text-orange-900 dark:text-orange-200' },
+                                { icon:Droplet, label:'Water', val:`${calc.water}oz`, sub:'Half your weight in oz', card:'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-100 dark:border-cyan-800', ic:'text-cyan-700 dark:text-cyan-400', vc:'text-cyan-900 dark:text-cyan-200' },
                             ].map(({ icon:Icon, label, val, sub, card, ic, vc }) => (
                                 <div key={label} className={`p-4 rounded-2xl border ${card} flex items-center justify-between`}>
                                     <div className="flex items-center gap-3">
@@ -1479,9 +1659,9 @@ const Onboarding = ({ onComplete }) => {
                         {isAdvancedOpen && (
                             <div className="grid grid-cols-3 gap-2">
                                 {[
-                                    { key:'manualProtein',  ph:`Pro: ${calc.proteinTarget}` },
+                                    { key:'manualProtein', ph:`Pro: ${calc.proteinTarget}` },
                                     { key:'manualCalories', ph:`Cal: ${calc.calories}` },
-                                    { key:'manualWater',    ph:`H₂O: ${calc.water}` },
+                                    { key:'manualWater', ph:`H₂O: ${calc.water}` },
                                 ].map(({ key, ph }) => (
                                     <input key={key} type="number" inputMode="numeric" placeholder={ph}
                                         onChange={e => set({ [key]: e.target.value })}
@@ -1491,9 +1671,8 @@ const Onboarding = ({ onComplete }) => {
                         )}
                     </div>
                 )}
-            </div>{/* end sliding content */}
+            </div>
 
-            {/* Fixed footer — Back + Next/Accept */}
             {step === 1 && <Footer onNext={next} nextDisabled={safeInt(form.currentWeight) <= 0} />}
             {step === 2 && <Footer onNext={next} nextDisabled={safeInt(form.heightFt) <= 0} />}
             {step === 3 && <Footer onNext={next} nextDisabled={safeInt(form.age) <= 0} />}
@@ -1508,8 +1687,8 @@ const Onboarding = ({ onComplete }) => {
                             ...form,
                             targets: {
                                 calories: safeInt(form.manualCalories) || calc.calories,
-                                protein:  safeInt(form.manualProtein)  || calc.proteinTarget,
-                                water:    safeInt(form.manualWater)    || calc.water,
+                                protein: safeInt(form.manualProtein) || calc.proteinTarget,
+                                water: safeInt(form.manualWater) || calc.water,
                             },
                         });
                     }}
@@ -1522,7 +1701,6 @@ const Onboarding = ({ onComplete }) => {
     );
 };
 
-
 const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, showRatio, isOverBudget }) => {
     const t = safeInt(target) || 1;
     const c = safeInt(current);
@@ -1530,28 +1708,20 @@ const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, sho
     const isComplete = percentage >= 100;
     const overAmount = Math.max(0, c - t);
 
-    // Over-budget overrides normal complete styling for calories
     const cardBorder = isOverBudget
         ? 'border-red-200 dark:border-red-800 shadow-md'
-        : isComplete
-        ? 'border-violet-200 dark:border-violet-800 shadow-md animate-pop'
+        : isComplete ? 'border-violet-200 dark:border-violet-800 shadow-md animate-pop'
         : 'border-stone-100 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]';
 
-    const fillColor = isOverBudget
-        ? 'bg-red-400 dark:bg-red-500'
-        : colorClass.fill;
+    const fillColor = isOverBudget ? 'bg-red-400 dark:bg-red-500' : colorClass.fill;
 
     return (
         <div className={`bg-white dark:bg-stone-900 p-5 rounded-3xl border transition-all duration-500 relative overflow-hidden ${cardBorder}`}>
             {isComplete && !isOverBudget && (
-                <div className="absolute top-2 right-2">
-                    <Sparkles size={16} className="text-violet-500 animate-confetti" />
-                </div>
+                <div className="absolute top-2 right-2"><Sparkles size={16} className="text-violet-500 animate-confetti" /></div>
             )}
             {isOverBudget && (
-                <div className="absolute top-2 right-2">
-                    <TrendingUp size={16} className="text-red-400" />
-                </div>
+                <div className="absolute top-2 right-2"><TrendingUp size={16} className="text-red-400" /></div>
             )}
             <div className="flex justify-between items-end mb-2 relative z-10">
                 <div className="flex items-center gap-2">
@@ -1569,11 +1739,7 @@ const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, sho
                 <div className={`h-full rounded-full transition-all duration-1000 ease-out ${fillColor}`} style={{ width: `${percentage}%` }}/>
             </div>
             <div className="mt-2 text-xs text-stone-400 text-right font-medium flex justify-between items-center">
-                {showRatio && c > 0 && (
-                    <span className="text-stone-400">
-                        {(c / Math.max(1, current)).toFixed(1)} cal/g
-                    </span>
-                )}
+                {showRatio && c > 0 && <span className="text-stone-400">{(c / Math.max(1, current)).toFixed(1)} cal/g</span>}
                 <span className="ml-auto">
                     {isOverBudget
                         ? <span className="text-red-500 dark:text-red-400 font-bold">+{overAmount} over</span>
@@ -1587,7 +1753,8 @@ const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, sho
     );
 };
 
-const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initialData }) => {
+// ── ADD FOOD MODAL — now with 3 tabs: Search / Create Food / My Meals ─────────
+const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initialData, onLogMeal }) => {
     const [mode, setMode] = useState('search');
     const [food, setFood] = useState({ name: '', protein: '', calories: '', note: '', portionTip: '' });
     const [customFood, setCustomFood] = useState({ name: '', protein: '', calories: '', portion: 'Custom' });
@@ -1603,11 +1770,7 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
             setShowSuggestions(false);
             return;
         }
-        if (!food.name || food.name.length < 2) { 
-            setSuggestions([]); 
-            setShowSuggestions(false);
-            return; 
-        }
+        if (!food.name || food.name.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
         const allFoods = [...(recentFoods || []), ...FOOD_LIBRARY];
         const uniqueFoods = Array.from(new Map(allFoods.map(item => [item.name, item])).values());
         const matches = uniqueFoods.filter(item => item.name.toLowerCase().includes(food.name.toLowerCase()));
@@ -1615,19 +1778,11 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
         setShowSuggestions(matches.length > 0);
     }, [food.name, recentFoods]);
 
-    // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
             if (initialData) {
-                // Pre-fill for editing
-                setFood({
-                    name: initialData.name,
-                    protein: initialData.protein,
-                    calories: initialData.calories,
-                    note: initialData.note || '',
-                    portionTip: ''
-                });
-                setMode('search'); // Use the main input form
+                setFood({ name: initialData.name, protein: initialData.protein, calories: initialData.calories, note: initialData.note || '', portionTip: '' });
+                setMode('search');
             } else {
                 setFood({ name: '', protein: '', calories: '', note: '', portionTip: '' });
                 setSuggestions([]);
@@ -1642,16 +1797,9 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
     const handleSelectFood = (item) => {
         haptic.light();
         suppressNextSuggestRef.current = true;
-        setFood({
-            name: item.name,
-            protein: item.protein,
-            calories: item.calories,
-            portionTip: item.portion,
-            note: ''
-        });
+        setFood({ name: item.name, protein: item.protein, calories: item.calories, portionTip: item.portion, note: '' });
         setSuggestions([]);
         setShowSuggestions(false);
-        // Blur input to dismiss keyboard
         inputRef.current?.blur();
     };
 
@@ -1666,25 +1814,28 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
 
     const handleSubmit = () => {
         haptic.success();
-        onAdd({ 
-            name: (food.name || 'Quick Add').trim(), 
-            protein:  safeInt(food.protein), 
-            calories: safeInt(food.calories), 
-            note: food.note,
-            loggedAt: Date.now()
-        }); 
-        setFood({ name: '', protein: '', calories: '', note: '', portionTip: '' }); 
+        onAdd({ name: (food.name || 'Quick Add').trim(), protein: safeInt(food.protein), calories: safeInt(food.calories), note: food.note, loggedAt: Date.now() });
+        setFood({ name: '', protein: '', calories: '', note: '', portionTip: '' });
         setShowSuggestions(false);
         onClose();
     };
 
-    // At least one macro must be entered before submitting
     const canSubmit = safeInt(food.protein) > 0 || safeInt(food.calories) > 0;
+
+    // Tab labels — 3 tabs now
+    const tabs = initialData
+        ? [{ key: 'search', label: 'Edit Food' }]
+        : [
+            { key: 'search', label: 'Search' },
+            { key: 'create', label: 'Create Food' },
+            { key: 'meals', label: 'My Meals' },
+          ];
 
     return (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-            <div className="bg-white dark:bg-stone-900 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-zoom-in overflow-y-auto max-h-[90vh] border border-stone-200 dark:border-stone-800">
-                <div className="flex justify-between items-center mb-4">
+            <div className="bg-white dark:bg-stone-900 w-full max-w-sm rounded-3xl shadow-2xl animate-zoom-in overflow-y-auto max-h-[92vh] border border-stone-200 dark:border-stone-800 flex flex-col">
+                {/* Header */}
+                <div className="flex justify-between items-center p-6 pb-4 flex-none">
                     <h3 className="text-lg font-bold text-stone-800 dark:text-stone-100">
                         {initialData ? 'Edit Food' : 'Log Food'}
                     </h3>
@@ -1692,89 +1843,127 @@ const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initi
                         <X size={20}/>
                     </button>
                 </div>
+
+                {/* Tabs */}
                 {!initialData && (
-                    <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl mb-4">
-                        <button onClick={() => setMode('search')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'search' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>Search</button>
-                        <button onClick={() => setMode('create')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'create' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>Create Food</button>
+                    <div className="px-6 pb-4 flex-none">
+                        <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+                            {tabs.map(t => (
+                                <button key={t.key} onClick={() => setMode(t.key)}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === t.key ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
-                {mode === 'search' ? (
-                    <>
-                        <div className="space-y-4 relative">
-                            <div className="relative">
-                                <input 
-                                    ref={inputRef}
-                                    placeholder="What did you eat?" 
-                                    className="w-full p-4 pl-10 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none" 
-                                    value={food.name} 
-                                    onChange={e => setFood({...food, name: e.target.value})} 
-                                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                                    onKeyDown={e => { if (e.key === 'Enter' && canSubmit) { setShowSuggestions(false); handleSubmit(); }}}
-                                    autoFocus 
-                                />
-                                <Search size={18} className="absolute left-3 top-4 text-stone-400" />
-                            </div>
-                            {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute top-14 left-0 right-0 bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 shadow-xl rounded-2xl z-50 max-h-48 overflow-y-auto">
-                                    {suggestions.map((item, idx) => (
-                                        <button 
-                                            key={idx} 
-                                            onClick={() => handleSelectFood(item)} 
-                                            className="w-full p-3 text-left hover:bg-stone-50 dark:hover:bg-stone-700 border-b border-stone-50 dark:border-stone-700 last:border-0 flex justify-between items-center text-stone-700 dark:text-stone-200 active:bg-stone-100 dark:active:bg-stone-600 transition-colors"
-                                        >
-                                            <span className="font-medium text-sm">{item.name}</span>
-                                            <span className="text-xs text-stone-400">{item.protein}g • {item.calories} cal</span>
-                                        </button>
-                                    ))}
+
+                {/* Content */}
+                <div className="px-6 pb-6 flex-1 overflow-y-auto">
+                    {/* ── Search tab ── */}
+                    {mode === 'search' && (
+                        <>
+                            <div className="space-y-4 relative">
+                                <div className="relative">
+                                    <input
+                                        ref={inputRef}
+                                        placeholder="What did you eat?"
+                                        className="w-full p-4 pl-10 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none"
+                                        value={food.name}
+                                        onChange={e => setFood({...food, name: e.target.value})}
+                                        onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && canSubmit) { setShowSuggestions(false); handleSubmit(); }}}
+                                        autoFocus
+                                    />
+                                    <Search size={18} className="absolute left-3 top-4 text-stone-400" />
                                 </div>
-                            )}
+                                {showSuggestions && suggestions.length > 0 && (
+                                    <div className="absolute top-14 left-0 right-0 bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 shadow-xl rounded-2xl z-50 max-h-48 overflow-y-auto">
+                                        {suggestions.map((item, idx) => (
+                                            <button key={idx} onClick={() => handleSelectFood(item)}
+                                                className="w-full p-3 text-left hover:bg-stone-50 dark:hover:bg-stone-700 border-b border-stone-50 dark:border-stone-700 last:border-0 flex justify-between items-center text-stone-700 dark:text-stone-200 active:bg-stone-100 dark:active:bg-stone-600 transition-colors">
+                                                <span className="font-medium text-sm">{item.name}</span>
+                                                <span className="text-xs text-stone-400">{item.protein}g · {item.calories} cal</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="flex gap-3">
+                                    <div className="flex-1">
+                                        <label className="text-xs text-stone-400 ml-1">Protein (g)</label>
+                                        <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0"
+                                            className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 font-bold text-stone-700 dark:text-stone-200 outline-none"
+                                            value={food.protein} onChange={e => setFood({...food, protein: e.target.value})}
+                                            onKeyDown={e => { if (e.key === 'Enter' && canSubmit) handleSubmit(); }} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-xs text-stone-400 ml-1">Calories</label>
+                                        <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0"
+                                            className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 font-bold text-stone-700 dark:text-stone-200 outline-none"
+                                            value={food.calories} onChange={e => setFood({...food, calories: e.target.value})}
+                                            onKeyDown={e => { if (e.key === 'Enter' && canSubmit) handleSubmit(); }} />
+                                    </div>
+                                </div>
+                                {food.portionTip && (
+                                    <div className="bg-violet-50 dark:bg-violet-900/30 p-3 rounded-xl flex items-center gap-2 text-xs text-teal-700 dark:text-teal-300">
+                                        <Hand size={14} className="shrink-0" />
+                                        <span><strong>Portion:</strong> {food.portionTip}</span>
+                                    </div>
+                                )}
+                                {food.protein && food.calories && safeInt(food.protein) > 0 && (
+                                    <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-xl text-xs text-stone-500 dark:text-stone-400 text-center">
+                                        <span className="font-medium">{(safeInt(food.calories) / safeInt(food.protein)).toFixed(1)}</span> calories per gram of protein
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={handleSubmit} disabled={!canSubmit}
+                                className="w-full mt-6 py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-2xl shadow-lg shadow-stone-200 dark:shadow-none hover:bg-stone-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+                                {initialData ? 'Save Changes' : 'Add Food'}
+                            </button>
+                        </>
+                    )}
+
+                    {/* ── Create Food tab ── */}
+                    {mode === 'create' && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs text-stone-400 ml-1">Food Name</label>
+                                <input placeholder="e.g. Grandma's Lasagna"
+                                    className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none"
+                                    value={customFood.name} onChange={e => setCustomFood({...customFood, name: e.target.value})} />
+                            </div>
                             <div className="flex gap-3">
                                 <div className="flex-1">
                                     <label className="text-xs text-stone-400 ml-1">Protein (g)</label>
-                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 font-bold text-stone-700 dark:text-stone-200 outline-none" value={food.protein} onChange={e => setFood({...food, protein: e.target.value})} onKeyDown={e => { if (e.key === 'Enter' && canSubmit) handleSubmit(); }} />
+                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0"
+                                        className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none"
+                                        value={customFood.protein} onChange={e => setCustomFood({...customFood, protein: e.target.value})} />
                                 </div>
                                 <div className="flex-1">
                                     <label className="text-xs text-stone-400 ml-1">Calories</label>
-                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 font-bold text-stone-700 dark:text-stone-200 outline-none" value={food.calories} onChange={e => setFood({...food, calories: e.target.value})} onKeyDown={e => { if (e.key === 'Enter' && canSubmit) handleSubmit(); }} />
+                                    <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0"
+                                        className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none"
+                                        value={customFood.calories} onChange={e => setCustomFood({...customFood, calories: e.target.value})} />
                                 </div>
                             </div>
-                            {food.portionTip && (
-                                <div className="bg-violet-50 dark:bg-violet-900/30 p-3 rounded-xl flex items-center gap-2 text-xs text-teal-700 dark:text-teal-300">
-                                    <Hand size={14} className="shrink-0" />
-                                    <span><strong>Portion:</strong> {food.portionTip}</span>
-                                </div>
-                            )}
-                            {food.protein && food.calories && safeInt(food.protein) > 0 && (
-                                <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-xl text-xs text-stone-500 dark:text-stone-400 text-center">
-                                    <span className="font-medium">{(safeInt(food.calories) / safeInt(food.protein)).toFixed(1)}</span> calories per gram of protein
-                                </div>
-                            )}
+                            <button onClick={handleSaveCustom}
+                                className="w-full mt-2 py-4 bg-violet-500 text-white font-bold rounded-2xl shadow-lg hover:bg-violet-600 transition-colors flex items-center justify-center gap-2 active:scale-95">
+                                <Save size={18}/> Save & Select
+                            </button>
                         </div>
-                        <button onClick={handleSubmit} disabled={!canSubmit} className="w-full mt-6 py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-2xl shadow-lg shadow-stone-200 dark:shadow-none hover:bg-stone-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
-                            {initialData ? 'Save Changes' : 'Add Log'}
-                        </button>
-                    </>
-                ) : (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs text-stone-400 ml-1">Food Name</label>
-                            <input placeholder="e.g. Grandma's Lasagna" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.name} onChange={e => setCustomFood({...customFood, name: e.target.value})} />
-                        </div>
-                        <div className="flex gap-3">
-                            <div className="flex-1">
-                                <label className="text-xs text-stone-400 ml-1">Protein (g)</label>
-                                <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.protein} onChange={e => setCustomFood({...customFood, protein: e.target.value})} />
-                            </div>
-                            <div className="flex-1">
-                                <label className="text-xs text-stone-400 ml-1">Calories</label>
-                                <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="0" className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none" value={customFood.calories} onChange={e => setCustomFood({...customFood, calories: e.target.value})} />
-                            </div>
-                        </div>
-                        <button onClick={handleSaveCustom} className="w-full mt-2 py-4 bg-violet-500 text-white font-bold rounded-2xl shadow-lg hover:bg-violet-600 transition-colors flex items-center justify-center gap-2 active:scale-95">
-                            <Save size={18}/> Save & Select
-                        </button>
-                    </div>
-                )}
+                    )}
+
+                    {/* ── My Meals tab ── */}
+                    {mode === 'meals' && (
+                        <MyMealsManager
+                            recentFoods={recentFoods}
+                            onLogMeal={(meal) => {
+                                onLogMeal(meal);
+                                onClose();
+                            }}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -1784,13 +1973,10 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
     const list = items || [];
     if (list.length === 0) return null;
 
-    // Swipe-to-delete: track per-item touch start X
     const swipeStartX = useRef({});
     const [swipedIdx, setSwipedIdx] = useState(null);
 
-    const handleTouchStart = (idx, e) => {
-        swipeStartX.current[idx] = e.touches[0].clientX;
-    };
+    const handleTouchStart = (idx, e) => { swipeStartX.current[idx] = e.touches[0].clientX; };
     const handleTouchEnd = (idx, e) => {
         const startX = swipeStartX.current[idx];
         if (startX == null) return;
@@ -1800,7 +1986,6 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
         delete swipeStartX.current[idx];
     };
 
-    // Group by meal period
     const grouped = list.reduce((acc, item, idx) => {
         const period = getMealPeriod(item.loggedAt);
         if (!acc[period]) acc[period] = [];
@@ -1817,10 +2002,8 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
                 {periodOrder.map(period => {
                     const periodItems = grouped[period];
                     if (!periodItems || periodItems.length === 0) return null;
-                    
                     const MealIcon = getMealIcon(period);
                     const periodTotals = computeTotals(periodItems);
-                    
                     return (
                         <div key={period} className="space-y-2">
                             <div className="flex items-center justify-between px-2">
@@ -1828,78 +2011,57 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
                                     <MealIcon size={14} className="text-stone-400" />
                                     <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">{getMealLabel(period)}</span>
                                 </div>
-                                <span className="text-xs text-stone-400">{periodTotals.protein}g • {periodTotals.calories} cal</span>
+                                <span className="text-xs text-stone-400">{periodTotals.protein}g · {periodTotals.calories} cal</span>
                             </div>
                             <div className="space-y-2">
                                 {periodItems.map((item) => (
-                                    <div
-                                        key={item.originalIndex}
-                                        className="relative overflow-hidden rounded-2xl"
+                                    <div key={item.originalIndex} className="relative overflow-hidden rounded-2xl"
                                         onTouchStart={e => handleTouchStart(item.originalIndex, e)}
-                                        onTouchEnd={e => handleTouchEnd(item.originalIndex, e)}
-                                    >
+                                        onTouchEnd={e => handleTouchEnd(item.originalIndex, e)}>
                                         {swipedIdx === item.originalIndex && (
-                                            <button
-                                                onClick={() => { setSwipedIdx(null); onDelete(item.originalIndex); }}
-                                                className="absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center text-white font-bold text-sm active:bg-red-600 z-10 rounded-2xl"
-                                            >
+                                            <button onClick={() => { setSwipedIdx(null); onDelete(item.originalIndex); }}
+                                                className="absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center text-white font-bold text-sm active:bg-red-600 z-10 rounded-2xl">
                                                 Delete
                                             </button>
                                         )}
-                                        <div
-                                            className={`bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm transition-transform duration-200 ${swipedIdx === item.originalIndex ? '-translate-x-20' : 'translate-x-0'}`}
-                                            onClick={() => swipedIdx === item.originalIndex ? setSwipedIdx(null) : null}
-                                        >
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-bold text-stone-700 dark:text-stone-200">{item.name}</span>
-                                                    {item.loggedAt && (
-                                                        <span className="text-[10px] text-stone-400">{formatTime(item.loggedAt)}</span>
-                                                    )}
-                                                    {item.servings && item.servings !== 1 && (
-                                                        <span className="text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded-md">×{item.servings}</span>
-                                                    )}
+                                        <div className={`bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm transition-transform duration-200 ${swipedIdx === item.originalIndex ? '-translate-x-20' : 'translate-x-0'}`}
+                                            onClick={() => swipedIdx === item.originalIndex ? setSwipedIdx(null) : null}>
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-bold text-stone-700 dark:text-stone-200">{item.name}</span>
+                                                        {item.loggedAt && <span className="text-[10px] text-stone-400">{formatTime(item.loggedAt)}</span>}
+                                                        {item.servings && item.servings !== 1 && (
+                                                            <span className="text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded-md">×{item.servings}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-stone-500 mt-1 flex gap-2 flex-wrap">
+                                                        {item.protein > 0 && <span className="bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-lg font-medium">{item.protein}g Pro</span>}
+                                                        {item.calories > 0 && <span className="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-lg font-medium">{item.calories} Cal</span>}
+                                                    </div>
                                                 </div>
-                                                <div className="text-xs text-stone-500 mt-1 flex gap-2 flex-wrap">
-                                                    {item.protein > 0 && <span className="bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-lg font-medium">{item.protein}g Pro</span>}
-                                                    {item.calories > 0 && <span className="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-lg font-medium">{item.calories} Cal</span>}
+                                                <div className="flex gap-1 ml-2 shrink-0">
+                                                    <button onClick={() => onEdit(item.originalIndex)} className="p-2 text-stone-300 hover:text-indigo-500 rounded-lg transition-colors active:scale-90"><Edit3 size={15} /></button>
+                                                    <button onClick={() => onDelete(item.originalIndex)} className="p-2 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90"><X size={15} /></button>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-1 ml-2 shrink-0">
-                                                <button onClick={() => onEdit(item.originalIndex)} className="p-2 text-stone-300 hover:text-indigo-500 rounded-lg transition-colors active:scale-90">
-                                                    <Edit3 size={15} />
-                                                </button>
-                                                <button onClick={() => onDelete(item.originalIndex)} className="p-2 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90">
-                                                    <X size={15} />
-                                                </button>
+                                            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-50 dark:border-stone-800">
+                                                <span className="text-[10px] text-stone-400 uppercase tracking-wider font-medium shrink-0">Servings</span>
+                                                <div className="flex items-center gap-1">
+                                                    {[0.5, 1, 1.5, 2].map(mult => {
+                                                        const baseProtein = item.baseProtein ?? item.protein;
+                                                        const baseCalories = item.baseCalories ?? item.calories;
+                                                        const currentServings = item.servings ?? 1;
+                                                        const isActive = Math.abs(currentServings - mult) < 0.01;
+                                                        return (
+                                                            <button key={mult} onClick={() => { haptic.light(); onMultiply(item.originalIndex, mult, baseProtein, baseCalories); }}
+                                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-90 ${isActive ? 'bg-stone-800 dark:bg-stone-600 text-white' : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700'}`}>
+                                                                {mult === 0.5 ? '½' : mult === 1 ? '1×' : mult === 1.5 ? '1½' : '2×'}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                        {/* Serving multiplier row */}
-                                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-50 dark:border-stone-800">
-                                            <span className="text-[10px] text-stone-400 uppercase tracking-wider font-medium shrink-0">Servings</span>
-                                            <div className="flex items-center gap-1">
-                                                {[0.5, 1, 1.5, 2].map(mult => {
-                                                    const baseProtein  = item.baseProtein  ?? item.protein;
-                                                    const baseCalories = item.baseCalories ?? item.calories;
-                                                    const currentServings = item.servings ?? 1;
-                                                    const isActive = Math.abs(currentServings - mult) < 0.01;
-                                                    return (
-                                                        <button
-                                                            key={mult}
-                                                            onClick={() => { haptic.light(); onMultiply(item.originalIndex, mult, baseProtein, baseCalories); }}
-                                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-90 ${
-                                                                isActive
-                                                                ? 'bg-stone-800 dark:bg-stone-600 text-white'
-                                                                : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700'
-                                                            }`}
-                                                        >
-                                                            {mult === 0.5 ? '½' : mult === 1 ? '1×' : mult === 1.5 ? '1½' : '2×'}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
                                         </div>
                                     </div>
                                 ))}
@@ -1913,26 +2075,19 @@ const FoodLogList = ({ items, onDelete, onEdit, onMultiply }) => {
 };
 
 const EmptyState = ({ onAddClick, suggestions, onGoLearn }) => {
-    // Pick a deterministic "food of the day" based on calendar date
     const todayIndex = new Date().getDate() % FOOD_LIBRARY.length;
     const featuredFood = FOOD_LIBRARY[todayIndex];
     const efficiency = (featuredFood.protein / featuredFood.calories * 100).toFixed(1);
 
     return (
         <div className="space-y-4 animate-fade-in">
-            {/* Food of the day — bridges empty state to the Learn tab */}
             <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden">
                 <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Sparkles size={14} className="text-violet-500" />
                         <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Protein Pick of the Day</span>
                     </div>
-                    <button
-                        onClick={onGoLearn}
-                        className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
-                    >
-                        See all →
-                    </button>
+                    <button onClick={onGoLearn} className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors">See all →</button>
                 </div>
                 <div className="px-4 pb-4">
                     <div className="flex items-center justify-between p-3 bg-violet-50 dark:bg-violet-900/20 rounded-2xl">
@@ -1951,31 +2106,23 @@ const EmptyState = ({ onAddClick, suggestions, onGoLearn }) => {
                 </div>
             </div>
 
-            {/* Quick-add suggestions */}
             <div className="text-center py-4">
                 <div className="w-14 h-14 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Utensils size={24} className="text-stone-400" />
                 </div>
                 <h3 className="text-base font-bold text-stone-700 dark:text-stone-200 mb-1">Nothing logged yet</h3>
-                <p className="text-sm text-stone-400 mb-4">Tap below to add your first meal</p>
+                <p className="text-sm text-stone-400 mb-4">Tap below to add your first food</p>
                 <div className="flex flex-wrap justify-center gap-2">
                     {suggestions.slice(0, 3).map((food, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => onAddClick(food)}
-                            className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-600 dark:text-stone-300 hover:border-violet-300 dark:hover:border-violet-700 transition-colors active:scale-95"
-                        >
+                        <button key={idx} onClick={() => onAddClick(food)}
+                            className="px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-600 dark:text-stone-300 hover:border-violet-300 dark:hover:border-violet-700 transition-colors active:scale-95">
                             {food.name.split(' (')[0]} <span className="text-violet-600 dark:text-violet-300">+{food.protein}g</span>
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Learn tab entry point */}
-            <button
-                onClick={onGoLearn}
-                className="w-full p-4 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 rounded-2xl flex items-center justify-between group active:scale-[0.98] transition-transform"
-            >
+            <button onClick={onGoLearn} className="w-full p-4 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 rounded-2xl flex items-center justify-between group active:scale-[0.98] transition-transform">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-white dark:bg-stone-800 rounded-xl text-cyan-700 dark:text-cyan-300">
                         <BookOpen size={18} />
@@ -2001,9 +2148,8 @@ const WeeklyView = ({ userId }) => {
         const getPastDates = () => {
             const dates = [];
             for (let i = 6; i >= 0; i--) { 
-                const d = new Date(); 
-                d.setDate(d.getDate() - i); 
-                dates.push(d.toISOString().split('T')[0]); 
+                const d = new Date(); d.setDate(d.getDate() - i);
+                dates.push(d.toISOString().split('T')[0]);
             }
             return dates;
         };
@@ -2020,29 +2166,22 @@ const WeeklyView = ({ userId }) => {
         setHistory(last7);
         setWeightHistory(DB.getWeightHistory());
         
-        // Calculate weekly insight
         const thisWeekProtein = last7.slice(0, 7).reduce((a, b) => a + (b.protein || 0), 0);
         const prevWeekDates = [];
         for (let i = 13; i >= 7; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
+            const d = new Date(); d.setDate(d.getDate() - i);
             prevWeekDates.push(d.toISOString().split('T')[0]);
         }
         const prevWeekProtein = prevWeekDates.reduce((sum, date) => {
             const log = DB.getLog(date);
-            if (log && log.items) {
-                return sum + computeTotals(log.items).protein;
-            }
+            if (log && log.items) return sum + computeTotals(log.items).protein;
             return sum;
         }, 0);
         
         if (prevWeekProtein > 0) {
             const change = ((thisWeekProtein - prevWeekProtein) / prevWeekProtein * 100).toFixed(0);
-            if (change > 0) {
-                setWeeklyInsight({ type: 'up', value: change, message: 'More protein than last week!' });
-            } else if (change < -10) {
-                setWeeklyInsight({ type: 'down', value: Math.abs(change), message: 'Less protein than last week' });
-            }
+            if (change > 0) setWeeklyInsight({ type: 'up', value: change, message: 'More protein than last week!' });
+            else if (change < -10) setWeeklyInsight({ type: 'down', value: Math.abs(change), message: 'Less protein than last week' });
         }
         
         setLoading(false);
@@ -2074,24 +2213,22 @@ const WeeklyView = ({ userId }) => {
             )}
             
             <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm text-center">
-                    <div className="text-xs text-stone-400 uppercase tracking-wider mb-1">Avg Protein</div>
-                    <div className="text-2xl font-bold text-stone-800 dark:text-stone-100">{avgProtein}g</div>
-                </div>
-                <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm text-center">
-                    <div className="text-xs text-stone-400 uppercase tracking-wider mb-1">Avg Calories</div>
-                    <div className="text-2xl font-bold text-stone-800 dark:text-stone-100">{avgCalories}</div>
-                </div>
-                <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm text-center">
-                    <div className="text-xs text-stone-400 uppercase tracking-wider mb-1">Days Logged</div>
-                    <div className="text-2xl font-bold text-stone-800 dark:text-stone-100">{daysLogged}/7</div>
-                </div>
+                {[
+                    { label: 'Avg Protein', val: `${avgProtein}g` },
+                    { label: 'Avg Calories', val: `${avgCalories}` },
+                    { label: 'Days Logged', val: `${daysLogged}/7` },
+                ].map(({ label, val }) => (
+                    <div key={label} className="bg-white dark:bg-stone-900 p-4 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm text-center">
+                        <div className="text-xs text-stone-400 uppercase tracking-wider mb-1">{label}</div>
+                        <div className="text-2xl font-bold text-stone-800 dark:text-stone-100">{val}</div>
+                    </div>
+                ))}
             </div>
             
             <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm">
                 <h4 className="font-bold text-stone-700 dark:text-stone-200 mb-6">Last 7 Days</h4>
                 <div className="flex justify-between items-end h-32 gap-2">
-                    {history.map((day, i) => {
+                    {history.map((day) => {
                         const heightPct = Math.min(100, (day.calories / 3000) * 100);
                         const isToday = day.date === getTodayStr();
                         return (
@@ -2110,7 +2247,6 @@ const WeeklyView = ({ userId }) => {
     );
 };
 
-// --- FAST FOOD GUIDE COMPONENT ---
 const FastFoodGuide = ({ onLogFood }) => {
     const [selectedChain, setSelectedChain] = useState(null);
     const chains = Object.entries(FAST_FOOD_DATA);
@@ -2123,7 +2259,6 @@ const FastFoodGuide = ({ onLogFood }) => {
             default: return 'bg-stone-100 text-stone-600';
         }
     };
-    
     const getBadgeLabel = (badge) => {
         switch(badge) {
             case 'best': return '🏆 Best bet';
@@ -2140,39 +2275,22 @@ const FastFoodGuide = ({ onLogFood }) => {
                 <button onClick={() => setSelectedChain(null)} className="flex items-center gap-2 text-stone-500 dark:text-stone-400 mb-4 hover:text-stone-700 dark:hover:text-stone-200 active:scale-95 transition-transform">
                     <ChevronLeft size={18} /> Back to chains
                 </button>
-                
                 <div className="flex items-center gap-3 mb-6">
-                    <div className={`w-12 h-12 ${chain.color} rounded-2xl flex items-center justify-center text-white font-bold text-lg`}>
-                        {chain.name.charAt(0)}
-                    </div>
+                    <div className={`w-12 h-12 ${chain.color} rounded-2xl flex items-center justify-center text-white font-bold text-lg`}>{chain.name.charAt(0)}</div>
                     <div>
                         <h3 className="text-xl font-bold text-stone-800 dark:text-stone-100">{chain.name}</h3>
                         <p className="text-xs text-stone-500 dark:text-stone-400">Tap any item to log it</p>
                     </div>
                 </div>
-                
                 <div className="space-y-3">
                     {chain.items.map((item, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => {
-                                haptic.success();
-                                onLogFood({
-                                    name: `${chain.name} - ${item.name}`,
-                                    protein: item.protein,
-                                    calories: item.calories,
-                                    loggedAt: Date.now()
-                                });
-                            }}
-                            className="w-full bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm text-left hover:border-violet-200 dark:hover:border-violet-800 transition-all active:scale-[0.98]"
-                        >
+                        <button key={idx} onClick={() => { haptic.success(); onLogFood({ name: `${chain.name} - ${item.name}`, protein: item.protein, calories: item.calories, loggedAt: Date.now() }); }}
+                            className="w-full bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm text-left hover:border-violet-200 dark:hover:border-violet-800 transition-all active:scale-[0.98]">
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-bold text-stone-800 dark:text-stone-100">{item.name}</span>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getBadgeStyle(item.badge)}`}>
-                                            {getBadgeLabel(item.badge)}
-                                        </span>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getBadgeStyle(item.badge)}`}>{getBadgeLabel(item.badge)}</span>
                                     </div>
                                     <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{item.note}</p>
                                 </div>
@@ -2197,86 +2315,58 @@ const FastFoodGuide = ({ onLogFood }) => {
                 <h3 className="text-orange-800 dark:text-orange-300 font-bold mb-2 flex items-center gap-2">
                     <Store size={18} /> Real food for real life
                 </h3>
-                <p className="text-orange-700 dark:text-orange-400 text-sm leading-relaxed">
-                    Sometimes fast food happens. Here's how to make the best of it - no judgment, just smart choices.
-                </p>
+                <p className="text-orange-700 dark:text-orange-400 text-sm leading-relaxed">Sometimes fast food happens. Here's how to make the best of it.</p>
             </div>
-            
             <div className="grid grid-cols-2 gap-3">
                 {chains.map(([key, chain]) => (
-                    <button
-                        key={key}
-                        onClick={() => { haptic.light(); setSelectedChain(key); }}
-                        className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm hover:border-stone-200 dark:hover:border-stone-700 transition-all active:scale-95 text-left"
-                    >
-                        <div className={`w-10 h-10 ${chain.color} rounded-xl flex items-center justify-center text-white font-bold mb-2`}>
-                            {chain.name.charAt(0)}
-                        </div>
+                    <button key={key} onClick={() => { haptic.light(); setSelectedChain(key); }}
+                        className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm hover:border-stone-200 dark:hover:border-stone-700 transition-all active:scale-95 text-left">
+                        <div className={`w-10 h-10 ${chain.color} rounded-xl flex items-center justify-center text-white font-bold mb-2`}>{chain.name.charAt(0)}</div>
                         <div className="font-bold text-stone-800 dark:text-stone-100 text-sm">{chain.name}</div>
                         <div className="text-xs text-stone-400">{chain.items.length} items</div>
                     </button>
                 ))}
             </div>
-            
             <div className="bg-stone-50 dark:bg-stone-800 p-5 rounded-2xl mt-6">
                 <h4 className="font-bold text-stone-700 dark:text-stone-200 mb-3 flex items-center gap-2">
                     <Lightbulb size={16} className="text-amber-500" /> Universal Tips
                 </h4>
                 <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
-                    <li className="flex gap-2"><span>🍗</span> <span><strong>Grilled beats crispy</strong> - saves 100-200 cal usually</span></li>
-                    <li className="flex gap-2"><span>🥤</span> <span><strong>Drinks add up fast</strong> - water or unsweetened saves 200+ cal</span></li>
-                    <li className="flex gap-2"><span>🍟</span> <span><strong>Fries are the real bomb</strong> - skip, split, or get small</span></li>
-                    <li className="flex gap-2"><span>🥗</span> <span><strong>Sauce on the side</strong> - you control the pour</span></li>
-                    <li className="flex gap-2"><span>📦</span> <span><strong>Big meal? Save half</strong> - it's two meals, not one</span></li>
+                    <li className="flex gap-2"><span>🍗</span><span><strong>Grilled beats crispy</strong> - saves 100-200 cal usually</span></li>
+                    <li className="flex gap-2"><span>🥤</span><span><strong>Drinks add up fast</strong> - water or unsweetened saves 200+ cal</span></li>
+                    <li className="flex gap-2"><span>🍟</span><span><strong>Fries are the real bomb</strong> - skip, split, or get small</span></li>
+                    <li className="flex gap-2"><span>🥗</span><span><strong>Sauce on the side</strong> - you control the pour</span></li>
+                    <li className="flex gap-2"><span>📦</span><span><strong>Big meal? Save half</strong> - it's two meals, not one</span></li>
                 </ul>
             </div>
         </div>
     );
 };
 
-// --- LEARN VIEW (with tabs for Basics and Fast Food) ---
 const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
     const [activeTab, setActiveTab] = useState('basics');
     const [filter, setFilter] = useState('all');
     
-    // Sort by protein efficiency (protein per calorie)
-    const sortedFoods = useMemo(() => {
-        return [...FOOD_LIBRARY].sort((a, b) => {
-            const effA = a.protein / a.calories;
-            const effB = b.protein / b.calories;
-            return effB - effA;
-        });
-    }, []);
+    const sortedFoods = useMemo(() => [...FOOD_LIBRARY].sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories)), []);
     
-    // Filter based on what user needs
     const contextualFoods = useMemo(() => {
-        if (filter === 'high-protein') {
-            return sortedFoods.filter(f => f.protein >= 20);
-        } else if (filter === 'low-cal') {
-            return sortedFoods.filter(f => f.calories <= 150);
-        } else if (filter === 'quick') {
-            return sortedFoods.filter(f => ['Egg', 'Greek Yogurt', 'Protein Powder', 'Cheese', 'Almonds'].some(q => f.name.includes(q)));
-        }
+        if (filter === 'high-protein') return sortedFoods.filter(f => f.protein >= 20);
+        if (filter === 'low-cal') return sortedFoods.filter(f => f.calories <= 150);
+        if (filter === 'quick') return sortedFoods.filter(f => ['Egg', 'Greek Yogurt', 'Protein Powder', 'Cheese', 'Almonds'].some(q => f.name.includes(q)));
         return sortedFoods;
     }, [sortedFoods, filter]);
     
-    // Show contextual suggestion if user is short on protein
     const showSuggestion = proteinRemaining > 20;
 
     return (
         <div className="space-y-4 animate-fade-in">
-            {/* Tab Switcher */}
             <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
-                <button
-                    onClick={() => setActiveTab('basics')}
-                    className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'basics' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}
-                >
+                <button onClick={() => setActiveTab('basics')}
+                    className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'basics' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
                     <BookOpen size={16} /> Basics
                 </button>
-                <button
-                    onClick={() => setActiveTab('fastfood')}
-                    className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'fastfood' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}
-                >
+                <button onClick={() => setActiveTab('fastfood')}
+                    className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'fastfood' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
                     <Store size={16} /> Dining Out
                 </button>
             </div>
@@ -2285,11 +2375,10 @@ const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
                 <>
                     <div className="bg-cyan-50 dark:bg-cyan-900/20 p-6 rounded-3xl border border-cyan-100 dark:border-cyan-800">
                         <h3 className="text-cyan-800 dark:text-cyan-300 font-bold mb-2 flex items-center gap-2">
-                            <BookOpen size={18} />Learn this once. Use it forever.
+                            <BookOpen size={18} /> Learn this once. Use it forever.
                         </h3>
                         <p className="text-cyan-700 dark:text-cyan-400 text-sm leading-relaxed">These are mental anchors. You don't need a database if you know the basics.</p>
                     </div>
-                    
                     {showSuggestion && (
                         <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-800">
                             <div className="flex items-center gap-2 mb-2">
@@ -2299,19 +2388,14 @@ const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
                             <p className="text-xs text-amber-700 dark:text-amber-400">Try filtering by "High Protein" below for the best options.</p>
                         </div>
                     )}
-                    
                     <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                         {['all', 'high-protein', 'low-cal', 'quick'].map(f => (
-                            <button
-                                key={f}
-                                onClick={() => setFilter(f)}
-                                className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 ${filter === f ? 'bg-stone-800 dark:bg-stone-700 text-white' : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300'}`}
-                            >
+                            <button key={f} onClick={() => setFilter(f)}
+                                className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 ${filter === f ? 'bg-stone-800 dark:bg-stone-700 text-white' : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300'}`}>
                                 {f === 'all' ? 'All Foods' : f === 'high-protein' ? '🥩 High Protein' : f === 'low-cal' ? '🥗 Low Cal' : '⚡ Quick'}
                             </button>
                         ))}
                     </div>
-                    
                     <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden">
                         {contextualFoods.map((food, idx) => {
                             const efficiency = (food.protein / food.calories * 100).toFixed(1);
@@ -2340,81 +2424,46 @@ const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
     );
 };
 
-// Legacy CheatSheet for backwards compatibility
-const CheatSheet = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
-    return <LearnView proteinRemaining={proteinRemaining} caloriesRemaining={caloriesRemaining} onLogFood={onLogFood} />;
-};
-
-// --- MAIN APP COMPONENT ---
-
-// ── INSTALL PROMPT ───────────────────────────────────────────────────────────
-// Shown once after first log entry. Detects platform and gives right instructions.
-// Stored in localStorage so it only shows once.
+// ── INSTALL PROMPT ────────────────────────────────────────────────────────────
 const InstallPrompt = ({ onDismiss }) => {
-    const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isAndroid = /android/i.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                      || window.navigator.standalone === true;
-
-    // Don't show if already installed
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     if (isStandalone) { onDismiss(); return null; }
 
     const instructions = isIOS
-        ? [
-            { icon: 'Share', text: 'Tap the Share button in Safari' },
-            { icon: '+', text: 'Tap Add to Home Screen' },
-            { icon: 'Done', text: 'Tap Add — done!' }
-          ]
+        ? [{ icon: 'Share', text: 'Tap the Share button in Safari' }, { icon: '+', text: 'Tap Add to Home Screen' }, { icon: 'Done', text: 'Tap Add — done!' }]
         : isAndroid
-        ? [
-            { icon: 'Menu', text: 'Tap the menu in Chrome (top right)' },
-            { icon: '+', text: 'Tap Add to Home Screen' },
-            { icon: 'Done', text: 'Tap Add — done!' }
-          ]
-        : [
-            { icon: '+', text: 'Use your browser Add to Home Screen option' }
-          ];
+        ? [{ icon: 'Menu', text: 'Tap the menu in Chrome (top right)' }, { icon: '+', text: 'Tap Add to Home Screen' }, { icon: 'Done', text: 'Tap Add — done!' }]
+        : [{ icon: '+', text: 'Use your browser Add to Home Screen option' }];
 
     return (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-end justify-center p-4 z-[70] animate-fade-in">
             <div className="bg-white dark:bg-stone-900 w-full max-w-sm rounded-3xl shadow-2xl border border-stone-100 dark:border-stone-800 animate-slide-in-up overflow-hidden">
-                {/* Header strip */}
                 <div className="bg-gradient-to-r from-violet-600 to-teal-500 p-5 flex items-center gap-4">
-                    {/* Mini bar chart icon */}
                     <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-end justify-center gap-1 p-2 flex-shrink-0">
                         <div className="w-2 bg-white/60 rounded-sm" style={{height:'40%'}}></div>
                         <div className="w-2 bg-white/80 rounded-sm" style={{height:'65%'}}></div>
-                        <div className="w-2 bg-white rounded-sm"    style={{height:'90%'}}></div>
+                        <div className="w-2 bg-white rounded-sm" style={{height:'90%'}}></div>
                     </div>
                     <div>
                         <div className="text-white font-extrabold text-base">Install Steady</div>
                         <div className="text-white/75 text-xs">Add to your home screen</div>
                     </div>
                 </div>
-                {/* Body */}
                 <div className="p-5">
-                    <p className="text-sm text-stone-600 dark:text-stone-400 mb-5 leading-relaxed">
-                        Steady works best as a home screen app — faster to open, feels native, and keeps your data right on your device.
-                    </p>
+                    <p className="text-sm text-stone-600 dark:text-stone-400 mb-5 leading-relaxed">Steady works best as a home screen app — faster to open, feels native, and keeps your data right on your device.</p>
                     <div className="space-y-3 mb-5">
                         {instructions.map(({ icon, text }, i) => (
                             <div key={i} className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex items-center justify-center text-violet-600 dark:text-violet-300 font-bold text-sm flex-shrink-0">
-                                    {icon}
-                                </div>
+                                <div className="w-8 h-8 bg-violet-50 dark:bg-violet-900/30 rounded-xl flex items-center justify-center text-violet-600 dark:text-violet-300 font-bold text-sm flex-shrink-0">{icon}</div>
                                 <span className="text-sm text-stone-700 dark:text-stone-300">{text}</span>
                             </div>
                         ))}
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={onDismiss}
-                            className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                            Maybe Later
-                        </button>
-                        <button onClick={onDismiss}
-                            className="flex-1 py-3 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                            Got It
-                        </button>
+                        <button onClick={onDismiss} className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 font-bold rounded-xl text-sm active:scale-95 transition-transform">Maybe Later</button>
+                        <button onClick={onDismiss} className="flex-1 py-3 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">Got It</button>
                     </div>
                 </div>
             </div>
@@ -2422,6 +2471,7 @@ const InstallPrompt = ({ onDismiss }) => {
     );
 };
 
+// ── MAIN APP ──────────────────────────────────────────────────────────────────
 const Steady = () => {
     const [profile, setProfile] = useState(DB.getProfile());
     const [selectedDate, setSelectedDate] = useState(getTodayStr());
@@ -2435,13 +2485,10 @@ const Steady = () => {
     const [toast, setToast] = useState(null);
     const [undoStack, setUndoStack] = useState([]);
     const [streakAnimating, setStreakAnimating] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
     const viewChangeRef = useRef(false);
     const dateChangeRef = useRef(false);
 
-    // NEW: State for editing item
-    const [editingItem, setEditingItem] = useState(null);
-
-    // Initialize logs
     useEffect(() => {
         const dayLog = DB.getLog(selectedDate);
         setLogs(dayLog || { water: 0, items: [] });
@@ -2456,55 +2503,19 @@ const Steady = () => {
     }, []);
 
     useEffect(() => {
-        if (!__ga.loadedSent) {
-            __ga.loadedSent = true;
-            trackEvent('app_loaded');
-        }
-        if (!__ga.started) {
-            __ga.started = true;
-            trackEvent('session_start');
-        }
-        const handleVisibility = () => {
-            if (document.visibilityState === 'hidden' && !__ga.endedSent) {
-                __ga.endedSent = true;
-                trackEvent('session_end', { reason: 'hidden' });
-            }
-        };
-        const handleUnload = () => {
-            if (!__ga.endedSent) {
-                __ga.endedSent = true;
-                trackEvent('session_end', { reason: 'unload' });
-            }
-        };
+        if (!__ga.loadedSent) { __ga.loadedSent = true; trackEvent('app_loaded'); }
+        if (!__ga.started) { __ga.started = true; trackEvent('session_start'); }
+        const handleVisibility = () => { if (document.visibilityState === 'hidden' && !__ga.endedSent) { __ga.endedSent = true; trackEvent('session_end', { reason: 'hidden' }); } };
+        const handleUnload = () => { if (!__ga.endedSent) { __ga.endedSent = true; trackEvent('session_end', { reason: 'unload' }); } };
         document.addEventListener('visibilitychange', handleVisibility);
         window.addEventListener('beforeunload', handleUnload);
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibility);
-            window.removeEventListener('beforeunload', handleUnload);
-        };
+        return () => { document.removeEventListener('visibilitychange', handleVisibility); window.removeEventListener('beforeunload', handleUnload); };
     }, []);
 
-    useEffect(() => {
-        if (!viewChangeRef.current) {
-            viewChangeRef.current = true;
-            return;
-        }
-        trackEvent('view_changed', { view });
-    }, [view]);
+    useEffect(() => { if (!viewChangeRef.current) { viewChangeRef.current = true; return; } trackEvent('view_changed', { view }); }, [view]);
+    useEffect(() => { if (!dateChangeRef.current) { dateChangeRef.current = true; return; } trackEvent('date_changed', { date: selectedDate }); }, [selectedDate]);
+    useEffect(() => { document.documentElement.classList.toggle('dark', isDark); }, [isDark]);
 
-    useEffect(() => {
-        if (!dateChangeRef.current) {
-            dateChangeRef.current = true;
-            return;
-        }
-        trackEvent('date_changed', { date: selectedDate });
-    }, [selectedDate]);
-
-    useEffect(() => { 
-        document.documentElement.classList.toggle('dark', isDark); 
-    }, [isDark]);
-
-    // Compute totals from items
     const totals = useMemo(() => {
         if (!logs) return { protein: 0, calories: 0 };
         return computeTotals(logs.items);
@@ -2514,8 +2525,6 @@ const Steady = () => {
         const merged = { ...logs, ...newData };
         setLogs(merged);
         DB.saveLog(selectedDate, merged);
-        
-        // Fixed streak logic - only increment for consecutive days
         if (selectedDate === getTodayStr() && profile) {
             if (profile.lastLogDate !== selectedDate) {
                 let newStreak = 1;
@@ -2533,45 +2542,41 @@ const Steady = () => {
 
     const handleAdd = useCallback((food) => {
         if (editingItem) {
-            // Logic for Saving an Edit
             const newItems = [...logs.items];
             newItems[editingItem.index] = { ...food, loggedAt: editingItem.item.loggedAt };
             updateLog({ items: newItems });
-            trackEvent('food_edited', {
-                calories: safeNum(food.calories),
-                protein: safeNum(food.protein),
-                date: selectedDate,
-                view
-            });
             setEditingItem(null);
             setToast({ message: `Updated ${food.name.split(' (')[0]}`, type: 'success' });
         } else {
-            // Logic for Adding New — stamp base values for serving multiplier
             const newFood = { ...food, servings: 1, baseProtein: safeInt(food.protein), baseCalories: safeInt(food.calories) };
             const newItems = [...(logs?.items || []), newFood];
             updateLog({ items: newItems });
-            trackEvent('food_logged', {
-                calories: safeNum(food.calories),
-                protein: safeNum(food.protein),
-                is_quick_add: false,
-                date: selectedDate,
-                view
-            });
-            
-            if (food.name && food.name !== 'Quick Add') {
-                DB.addRecentFood(food);
-                setRecentFoods(DB.getRecentFoods());
-            }
+            trackEvent('food_logged', { calories: safeNum(food.calories), protein: safeNum(food.protein), date: selectedDate, view });
+            if (food.name && food.name !== 'Quick Add') { DB.addRecentFood(food); setRecentFoods(DB.getRecentFoods()); }
             setToast({ message: `Added ${food.name.split(' (')[0]}`, type: 'success' });
-            // Show install prompt on first-ever food log if not already installed
             const hasSeenInstall = localStorage.getItem('steady_install_seen');
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-            if (!hasSeenInstall && !isStandalone) {
-                setTimeout(() => setShowInstallPrompt(true), 800);
-                localStorage.setItem('steady_install_seen', '1');
-            }
+            if (!hasSeenInstall && !isStandalone) { setTimeout(() => setShowInstallPrompt(true), 800); localStorage.setItem('steady_install_seen', '1'); }
         }
     }, [logs, updateLog, editingItem, selectedDate, view]);
+
+    // ── Log an entire saved meal at once ─────────────────────────────────────
+    const handleLogMeal = useCallback((meal) => {
+        if (!meal.items || meal.items.length === 0) return;
+        const now = Date.now();
+        const newItems = meal.items.map(item => ({
+            ...item,
+            loggedAt: now,
+            servings: 1,
+            baseProtein: safeInt(item.protein),
+            baseCalories: safeInt(item.calories),
+        }));
+        const merged = [...(logs?.items || []), ...newItems];
+        updateLog({ items: merged });
+        trackEvent('meal_logged', { meal_name: meal.name, item_count: newItems.length, date: selectedDate });
+        const t = mealTotals(meal);
+        setToast({ message: `Logged "${meal.name}" — ${t.protein}g protein`, type: 'success' });
+    }, [logs, updateLog, selectedDate]);
 
     const handleEditClick = useCallback((index) => {
         const item = logs.items[index];
@@ -2582,49 +2587,27 @@ const Steady = () => {
     const handleMultiply = useCallback((index, multiplier, baseProtein, baseCalories) => {
         const newItems = [...logs.items];
         const item = newItems[index];
-        newItems[index] = {
-            ...item,
-            servings: multiplier,
-            baseProtein:  baseProtein,
-            baseCalories: baseCalories,
-            protein:  Math.round(baseProtein  * multiplier),
-            calories: Math.round(baseCalories * multiplier),
-        };
+        newItems[index] = { ...item, servings: multiplier, baseProtein, baseCalories, protein: Math.round(baseProtein * multiplier), calories: Math.round(baseCalories * multiplier) };
         updateLog({ items: newItems });
     }, [logs, updateLog]);
 
     const handleQuickAdd = useCallback((food) => {
-        // Quick add always adds new, never edits
         const newFood = { ...food, loggedAt: Date.now(), servings: 1, baseProtein: safeInt(food.protein), baseCalories: safeInt(food.calories) };
-        // We manually call the add logic here instead of handleAdd to avoid edit state confusion
         const newItems = [...(logs?.items || []), newFood];
         updateLog({ items: newItems });
-        trackEvent('food_logged', {
-            calories: safeNum(food.calories),
-            protein: safeNum(food.protein),
-            is_quick_add: true,
-            date: selectedDate,
-            view
-        });
-        if (food.name && food.name !== 'Quick Add') {
-            DB.addRecentFood(food);
-            setRecentFoods(DB.getRecentFoods());
-        }
+        if (food.name && food.name !== 'Quick Add') { DB.addRecentFood(food); setRecentFoods(DB.getRecentFoods()); }
         setToast({ message: `Added ${food.name.split(' (')[0]}`, type: 'success' });
-    }, [logs, updateLog, selectedDate, view]);
+    }, [logs, updateLog]);
 
     const handleCopyYesterday = useCallback(() => {
         const yesterdayLog = DB.getLog(getYesterdayStr());
         if (yesterdayLog && yesterdayLog.items && yesterdayLog.items.length > 0) {
             haptic.success();
-            const copiedItems = yesterdayLog.items.map(item => ({
-                ...item,
-                loggedAt: Date.now()
-            }));
+            const copiedItems = yesterdayLog.items.map(item => ({ ...item, loggedAt: Date.now() }));
             updateLog({ items: [...(logs?.items || []), ...copiedItems] });
             setToast({ message: `Copied ${copiedItems.length} items from yesterday`, type: 'success' });
         }
-    }, [logs, updateLog, selectedDate, view]);
+    }, [logs, updateLog]);
 
     const handleSaveCustom = useCallback((customFood) => {
         DB.addRecentFood(customFood);
@@ -2635,39 +2618,22 @@ const Steady = () => {
         haptic.light();
         const item = logs.items[idx];
         const newItems = logs.items.filter((_, i) => i !== idx);
-        
-        // Save to undo stack
         setUndoStack(prev => [...prev, { item, index: idx }]);
-        
         updateLog({ items: newItems });
-        trackEvent('food_deleted', {
-            date: selectedDate,
-            view
-        });
-        
-        setToast({
-            message: `Removed ${item.name}`,
-            action: 'Undo',
-            type: 'info'
-        });
-    }, [logs, updateLog, selectedDate, view]);
+        setToast({ message: `Removed ${item.name}`, action: 'Undo', type: 'info' });
+    }, [logs, updateLog]);
 
     const handleUndo = useCallback(() => {
         if (undoStack.length === 0) return;
         haptic.medium();
         const lastUndo = undoStack[undoStack.length - 1];
         setUndoStack(prev => prev.slice(0, -1));
-        
         const newItems = [...(logs?.items || [])];
         newItems.splice(lastUndo.index, 0, lastUndo.item);
         updateLog({ items: newItems });
-        trackEvent('food_delete_undone', {
-            date: selectedDate,
-            view
-        });
         setToast(null);
-    }, [undoStack, logs, updateLog, selectedDate, view]);
-    
+    }, [undoStack, logs, updateLog]);
+
     const handleWater = useCallback((amt) => {
         haptic.light();
         updateLog({ water: Math.max(0, (logs?.water || 0) + amt) });
@@ -2687,11 +2653,9 @@ const Steady = () => {
         setSelectedDate(date.toISOString().split('T')[0]);
     }, [selectedDate]);
 
-    // Get yesterday's items for copy feature
     const yesterdayLog = useMemo(() => DB.getLog(getYesterdayStr()), []);
     const yesterdayItems = yesterdayLog?.items || [];
 
-    // Onboarding screen (no profile yet)
     if (!profile) {
         return (
             <div className="fixed inset-0 bg-[#FDFBF7] dark:bg-stone-950 flex items-center justify-center">
@@ -2702,24 +2666,23 @@ const Steady = () => {
         );
     }
 
-    if (!logs) return null; // Loading state
+    if (!logs) return null;
 
-    const targets = { 
-        calories: safeInt(profile.targets?.calories) || 2000, 
-        protein: safeInt(profile.targets?.protein) || 150, 
-        water: safeInt(profile.targets?.water) || 100 
+    const targets = {
+        calories: safeInt(profile.targets?.calories) || 2000,
+        protein: safeInt(profile.targets?.protein) || 150,
+        water: safeInt(profile.targets?.water) || 100
     };
-    
-    const proteinRemaining  = Math.max(0, targets.protein  - totals.protein);
+
+    const proteinRemaining = Math.max(0, targets.protein - totals.protein);
     const caloriesRemaining = Math.max(0, targets.calories - totals.calories);
-    const caloriesOver      = Math.max(0, totals.calories  - targets.calories);
+    const caloriesOver = Math.max(0, totals.calories - targets.calories);
 
     return (
         <div className="fixed inset-0 flex flex-col bg-[#FDFBF7] dark:bg-stone-950">
-            {/* App Container - centered with max width for tablets */}
             <div className="w-full h-full max-w-lg mx-auto bg-white dark:bg-stone-900 shadow-2xl flex flex-col overflow-hidden">
                 
-                {/* Header - Fixed */}
+                {/* Header */}
                 <header className="flex-none bg-white dark:bg-stone-900 px-6 pt-4 pb-4 border-b border-stone-100 dark:border-stone-800 z-10">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-2">
@@ -2743,8 +2706,7 @@ const Steady = () => {
                                 <Calendar size={14} />
                                 <button
                                     onClick={() => { if (selectedDate !== getTodayStr()) { haptic.light(); setSelectedDate(getTodayStr()); }}}
-                                    className={selectedDate !== getTodayStr() ? 'text-violet-600 dark:text-violet-400 underline underline-offset-2 decoration-dotted' : ''}
-                                >
+                                    className={selectedDate !== getTodayStr() ? 'text-violet-600 dark:text-violet-400 underline underline-offset-2 decoration-dotted' : ''}>
                                     {formatDateDisplay(selectedDate)}
                                 </button>
                                 {selectedDate !== getTodayStr() && (
@@ -2758,18 +2720,13 @@ const Steady = () => {
                     )}
                 </header>
 
-                {/* Main Content - Scrollable */}
+                {/* Main Content */}
                 <main className="flex-1 overflow-y-auto smooth-scroll scrollbar-hide">
                     <div className="p-4 pb-6 space-y-4">
                         {view === 'dashboard' && (
                             <div className="space-y-4 animate-slide-up">
-
-                                {/* ── TIER 1: The day at a glance ─────────────────────
-                                     Three stats side-by-side at the top — the numbers are 
-                                     the hero. Big, readable, instant context on open.
-                                ─────────────────────────────────────────────────────── */}
+                                {/* Stats row */}
                                 <div className="grid grid-cols-3 gap-3">
-                                    {/* Protein */}
                                     <div className={`bg-white dark:bg-stone-900 p-4 rounded-2xl border transition-all duration-500 ${totals.protein >= targets.protein ? 'border-violet-200 dark:border-violet-700' : 'border-stone-100 dark:border-stone-800'}`}>
                                         <div className="flex items-center gap-1.5 mb-2">
                                             <Utensils size={13} className="text-teal-600 dark:text-teal-400" />
@@ -2791,7 +2748,6 @@ const Steady = () => {
                                         )}
                                     </div>
 
-                                    {/* Calories */}
                                     <div className={`bg-white dark:bg-stone-900 p-4 rounded-2xl border transition-all duration-500 ${caloriesOver > 0 ? 'border-red-200 dark:border-red-800' : 'border-stone-100 dark:border-stone-800'}`}>
                                         <div className="flex items-center gap-1.5 mb-2">
                                             <Flame size={13} className={caloriesOver > 0 ? 'text-red-500' : 'text-orange-500'} />
@@ -2805,12 +2761,9 @@ const Steady = () => {
                                             <div className={`h-full rounded-full transition-all duration-1000 ease-out ${caloriesOver > 0 ? 'bg-red-400' : 'bg-orange-400'}`}
                                                  style={{ width: `${Math.min(100,(totals.calories/targets.calories)*100)}%` }}/>
                                         </div>
-                                        {caloriesOver > 0 && (
-                                            <span className="text-[9px] font-bold text-red-500 mt-1 block">+{caloriesOver} over</span>
-                                        )}
+                                        {caloriesOver > 0 && <span className="text-[9px] font-bold text-red-500 mt-1 block">+{caloriesOver} over</span>}
                                     </div>
 
-                                    {/* Water — compact, tap to expand buttons */}
                                     <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 transition-all duration-500">
                                         <div className="flex items-center gap-1.5 mb-2">
                                             <Droplet size={13} className="text-cyan-500" />
@@ -2828,11 +2781,11 @@ const Steady = () => {
                                     </div>
                                 </div>
 
-                                {/* Water quick-add — compact single row, lives right under the stats */}
+                                {/* Water quick-add */}
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-stone-400 shrink-0 pl-1">Water</span>
                                     <div className="flex-1 flex gap-2">
-                                        <button onClick={() => handleWater(8)}  className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl text-xs active:scale-95 transition-transform">+8oz</button>
+                                        <button onClick={() => handleWater(8)} className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl text-xs active:scale-95 transition-transform">+8oz</button>
                                         <button onClick={() => handleWater(16)} className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl text-xs active:scale-95 transition-transform">+16oz</button>
                                         <button onClick={() => handleWater(32)} className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 font-bold rounded-xl text-xs active:scale-95 transition-transform">+32oz</button>
                                         <button onClick={() => handleWater(-8)} className="w-9 py-2 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-xs flex items-center justify-center active:scale-95 transition-transform shrink-0">
@@ -2841,76 +2794,49 @@ const Steady = () => {
                                     </div>
                                 </div>
 
-                                {/* ── Insight card — only shows when relevant ── */}
+                                {/* Insight */}
                                 {selectedDate === getTodayStr() && (
-                                    <InsightCard 
-                                        proteinRemaining={proteinRemaining} 
-                                        caloriesRemaining={caloriesRemaining}
-                                        caloriesOver={caloriesOver}
-                                        proteinTarget={targets.protein}
-                                    />
+                                    <InsightCard proteinRemaining={proteinRemaining} caloriesRemaining={caloriesRemaining} caloriesOver={caloriesOver} proteinTarget={targets.protein} />
                                 )}
 
-                                {/* ── TIER 2: Actions ─────────────────────────────────
-                                     Log Meal is the primary CTA — full width, prominent.
-                                     Quick Add lives directly beneath as a secondary action.
-                                ─────────────────────────────────────────────────────── */}
-                                <button onClick={() => { haptic.medium(); setEditingItem(null); setShowAddModal(true); }} className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-2xl shadow-lg shadow-stone-200/60 dark:shadow-none hover:bg-stone-700 dark:hover:bg-stone-600 transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
-                                    <Plus size={20} /> Log Meal
+                                {/* ── PRIMARY CTA — "Log Food" ── */}
+                                <button
+                                    onClick={() => { haptic.medium(); setEditingItem(null); setShowAddModal(true); }}
+                                    className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-2xl shadow-lg shadow-stone-200/60 dark:shadow-none hover:bg-stone-700 dark:hover:bg-stone-600 transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
+                                    <Plus size={20} /> Log Food
                                 </button>
 
                                 {selectedDate === getTodayStr() && (
-                                    <QuickLogSection 
-                                        yesterdayItems={yesterdayItems}
-                                        onCopyYesterday={handleCopyYesterday}
-                                    />
+                                    <QuickLogSection yesterdayItems={yesterdayItems} onCopyYesterday={handleCopyYesterday} />
                                 )}
 
-                                {/* ── TIER 3: The journal ──────────────────────────────
-                                     Everything else scrolls below — the detail layer.
-                                ─────────────────────────────────────────────────────── */}
+                                {/* Journal */}
                                 {logs.items && logs.items.length > 0 ? (
                                     <>
                                         <FoodLogList items={logs.items} onDelete={handleDelete} onEdit={handleEditClick} onMultiply={handleMultiply} />
-                                        {/* Clear day — subtle, bottom of log, not intrusive */}
                                         <div className="text-center pt-2">
-                                            <button
-                                                onClick={() => { haptic.light(); updateLog({ items: [], water: 0 }); }}
-                                                className="text-xs text-stone-300 dark:text-stone-600 hover:text-red-400 dark:hover:text-red-500 transition-colors"
-                                            >
+                                            <button onClick={() => { haptic.light(); updateLog({ items: [], water: 0 }); }}
+                                                className="text-xs text-stone-300 dark:text-stone-600 hover:text-red-400 dark:hover:text-red-500 transition-colors">
                                                 Clear {selectedDate === getTodayStr() ? "today's" : "this day's"} log
                                             </button>
                                         </div>
                                     </>
                                 ) : (
-                                    <EmptyState 
-                                        onAddClick={handleQuickAdd}
-                                        suggestions={FOOD_LIBRARY.filter(f => f.protein >= 15).slice(0, 3)}
-                                        onGoLearn={() => setView('learn')}
-                                    />
+                                    <EmptyState onAddClick={handleQuickAdd} suggestions={FOOD_LIBRARY.filter(f => f.protein >= 15).slice(0, 3)} onGoLearn={() => setView('learn')} />
                                 )}
                             </div>
                         )}
+
                         {view === 'settings' && (
-                            <SettingsView 
-                                profile={profile} 
-                                onUpdate={(p) => { setProfile(p); DB.saveProfile(p); }} 
-                                onLogout={DB.clearAll} 
-                                toggleTheme={() => setIsDark(!isDark)} 
-                                isDark={isDark} 
-                                onNavigate={setView} 
-                                selectedDate={selectedDate}
-                                recentFoods={recentFoods}
-                                onFoodsChanged={(updated) => setRecentFoods(updated)}
-                            />
+                            <SettingsView profile={profile} onUpdate={(p) => { setProfile(p); DB.saveProfile(p); }} onLogout={DB.clearAll} toggleTheme={() => setIsDark(!isDark)} isDark={isDark} onNavigate={setView} selectedDate={selectedDate} recentFoods={recentFoods} onFoodsChanged={(updated) => setRecentFoods(updated)} />
                         )}
                         {view === 'weekly' && <WeeklyView userId="local" />}
-                        {view === 'learn' && <CheatSheet proteinRemaining={proteinRemaining} caloriesRemaining={caloriesRemaining} onLogFood={handleAdd} />}
+                        {view === 'learn' && <LearnView proteinRemaining={proteinRemaining} caloriesRemaining={caloriesRemaining} onLogFood={handleAdd} />}
                         {view === 'support' && <SupportView onBack={() => setView('settings')} />}
                     </div>
                 </main>
 
-                {/* Bottom Navigation - Fixed */}
+                {/* Bottom Nav */}
                 <nav className="flex-none bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     <div className="flex justify-between items-center w-full max-w-xs mx-auto">
                         <button onClick={() => setView('dashboard')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors active:scale-90 ${view === 'dashboard' ? 'text-violet-700 dark:text-violet-300' : 'text-stone-400'}`}>
@@ -2930,38 +2856,28 @@ const Steady = () => {
             </div>
 
             {/* Modals */}
-            <AddFoodModal 
-                isOpen={showAddModal} 
-                onClose={() => { setShowAddModal(false); setEditingItem(null); }} 
-                onAdd={handleAdd} 
-                onSaveCustom={handleSaveCustom} 
-                recentFoods={recentFoods} 
+            <AddFoodModal
+                isOpen={showAddModal}
+                onClose={() => { setShowAddModal(false); setEditingItem(null); }}
+                onAdd={handleAdd}
+                onLogMeal={handleLogMeal}
+                onSaveCustom={handleSaveCustom}
+                recentFoods={recentFoods}
                 initialData={editingItem?.item}
             />
             <WeightUpdateModal isOpen={showWeightModal} onClose={() => setShowWeightModal(false)} currentWeight={profile.currentWeight} onUpdate={handleUpdateWeight} />
-            {showInstallPrompt && (
-                <InstallPrompt onDismiss={() => setShowInstallPrompt(false)} />
-            )}
+            {showInstallPrompt && <InstallPrompt onDismiss={() => setShowInstallPrompt(false)} />}
             
-            {/* Toast */}
             {toast && (
-                <Toast 
-                    message={toast.message} 
-                    action={toast.action}
-                    onAction={handleUndo}
-                    onClose={() => setToast(null)}
-                    type={toast.type}
-                />
+                <Toast message={toast.message} action={toast.action} onAction={handleUndo} onClose={() => setToast(null)} type={toast.type} />
             )}
         </div>
     );
 };
 
-// Mount the app
 const root = createRoot(document.getElementById('root'));
 root.render(<Steady />);
 
-// Tell index.html the app has mounted — dismisses the loading screen
 if (typeof window.__steadyReady === 'function') {
     setTimeout(window.__steadyReady, 150);
 }
