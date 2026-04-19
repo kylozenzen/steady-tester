@@ -511,368 +511,6 @@ const Toast = ({ message, action, onAction, onClose, type = 'info' }) => {
     );
 };
 
-// ── MEAL MACROS HELPER ────────────────────────────────────────────────────────
-const mealTotals = (meal) => computeTotals(meal.items || []);
-
-// ── MY MEALS — full manager (list + create + edit) ───────────────────────────
-const MyMealsManager = ({ onLogMeal, recentFoods }) => {
-    const [meals, setMeals] = useState(DB.getMeals());
-    const [view, setView] = useState('list'); // 'list' | 'create' | 'edit'
-    const [editingMeal, setEditingMeal] = useState(null);
-    const [confirmDelete, setConfirmDelete] = useState(null);
-
-    const refresh = () => setMeals(DB.getMeals());
-
-    const handleLog = (meal) => {
-        haptic.success();
-        onLogMeal(meal);
-    };
-
-    const handleDeleteMeal = (id) => {
-        haptic.error();
-        DB.deleteMeal(id);
-        setConfirmDelete(null);
-        refresh();
-    };
-
-    if (view === 'create' || view === 'edit') {
-        return (
-            <MealEditor
-                meal={editingMeal}
-                recentFoods={recentFoods}
-                onSave={(meal) => {
-                    if (view === 'edit') {
-                        DB.updateMeal(meal.id, meal);
-                    } else {
-                        DB.addMeal(meal);
-                    }
-                    refresh();
-                    setView('list');
-                    setEditingMeal(null);
-                }}
-                onCancel={() => { setView('list'); setEditingMeal(null); }}
-            />
-        );
-    }
-
-    return (
-        <div className="space-y-3">
-            {/* Create button */}
-            <button
-                onClick={() => { haptic.medium(); setEditingMeal(null); setView('create'); }}
-                className="w-full py-3 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-2xl text-stone-500 dark:text-stone-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-violet-300 dark:hover:border-violet-700 hover:text-violet-600 dark:hover:text-violet-300 transition-all active:scale-[0.98]"
-            >
-                <Plus size={16} /> Create New Meal
-            </button>
-
-            {meals.length === 0 ? (
-                <div className="text-center py-8">
-                    <div className="w-12 h-12 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <ChefHat size={22} className="text-stone-400" />
-                    </div>
-                    <p className="text-sm font-bold text-stone-600 dark:text-stone-300 mb-1">No saved meals yet</p>
-                    <p className="text-xs text-stone-400 leading-relaxed">Build a meal once, log it in one tap.<br/>Great for your go-to combos.</p>
-                </div>
-            ) : (
-                <div className="space-y-2">
-                    {meals.map((meal) => {
-                        const t = mealTotals(meal);
-                        return (
-                            <div key={meal.id} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 overflow-hidden">
-                                {confirmDelete === meal.id ? (
-                                    <div className="p-4">
-                                        <p className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">Delete &ldquo;{meal.name}&rdquo;?</p>
-                                        <p className="text-xs text-stone-400 mb-3">This removes the saved meal. Past logs are unaffected.</p>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setConfirmDelete(null)}
-                                                className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                                                Keep
-                                            </button>
-                                            <button onClick={() => handleDeleteMeal(meal.id)}
-                                                className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl text-sm active:scale-95 transition-transform">
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="p-4">
-                                        {/* Header row */}
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-bold text-stone-800 dark:text-stone-100 truncate">{meal.name}</div>
-                                                <div className="text-xs text-stone-400 mt-0.5">{meal.items?.length || 0} item{meal.items?.length !== 1 ? 's' : ''}</div>
-                                            </div>
-                                            <div className="flex items-center gap-1 ml-3 shrink-0">
-                                                <button
-                                                    onClick={() => { haptic.light(); setEditingMeal(meal); setView('edit'); }}
-                                                    className="p-2 text-stone-300 hover:text-violet-500 dark:hover:text-violet-400 rounded-lg transition-colors active:scale-90">
-                                                    <Edit3 size={15} />
-                                                </button>
-                                                <button onClick={() => setConfirmDelete(meal.id)}
-                                                    className="p-2 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90">
-                                                    <Trash2 size={15} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Macro badges */}
-                                        <div className="flex gap-2 mb-3">
-                                            <span className="text-xs bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2.5 py-1 rounded-lg font-medium">{t.protein}g protein</span>
-                                            <span className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-lg font-medium">{t.calories} cal</span>
-                                        </div>
-
-                                        {/* Items preview */}
-                                        {meal.items?.length > 0 && (
-                                            <div className="text-xs text-stone-400 mb-3 line-clamp-1">
-                                                {meal.items.map(i => i.name).join(' · ')}
-                                            </div>
-                                        )}
-
-                                        {/* Log button */}
-                                        <button
-                                            onClick={() => handleLog(meal)}
-                                            className="w-full py-2.5 bg-stone-800 dark:bg-stone-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-stone-700 dark:hover:bg-stone-600"
-                                        >
-                                            <Plus size={15} /> Log This Meal
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-};
-
-// ── MEAL EDITOR — create or edit a saved meal ────────────────────────────────
-const MealEditor = ({ meal, recentFoods, onSave, onCancel }) => {
-    const isEdit = !!meal;
-    const [name, setName] = useState(meal?.name || '');
-    const [items, setItems] = useState(meal?.items ? [...meal.items] : []);
-    const [showFoodSearch, setShowFoodSearch] = useState(false);
-
-    const totals = useMemo(() => computeTotals(items), [items]);
-
-    const handleAddFoodToMeal = (food) => {
-        haptic.light();
-        setItems(prev => [...prev, {
-            name: food.name,
-            protein: safeInt(food.protein),
-            calories: safeInt(food.calories),
-        }]);
-        setShowFoodSearch(false);
-    };
-
-    const handleRemoveItem = (idx) => {
-        haptic.light();
-        setItems(prev => prev.filter((_, i) => i !== idx));
-    };
-
-    const handleSave = () => {
-        if (!name.trim() || items.length === 0) return;
-        haptic.success();
-        onSave({
-            ...(meal || {}),
-            name: name.trim(),
-            items,
-        });
-    };
-
-    const canSave = name.trim().length > 0 && items.length > 0;
-
-    return (
-        <div className="space-y-4 animate-fade-in">
-            {/* Back + title */}
-            <div className="flex items-center gap-2">
-                <button onClick={onCancel} className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 active:scale-90 transition-transform">
-                    <ChevronLeft size={20} />
-                </button>
-                <h4 className="font-bold text-stone-800 dark:text-stone-100 text-sm">{isEdit ? 'Edit Meal' : 'New Meal'}</h4>
-            </div>
-
-            {/* Meal name */}
-            <div>
-                <label className="text-xs text-stone-400 ml-1 block mb-1">Meal Name</label>
-                <input
-                    className="w-full p-3.5 bg-stone-50 dark:bg-stone-800 rounded-xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 font-bold outline-none"
-                    placeholder='e.g. "Post-Workout Shake"'
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    autoFocus={!isEdit}
-                />
-            </div>
-
-            {/* Items list */}
-            <div>
-                <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs text-stone-400 ml-1">Food Items</label>
-                    {items.length > 0 && (
-                        <span className="text-xs text-stone-400">{totals.protein}g · {totals.calories} cal</span>
-                    )}
-                </div>
-
-                {items.length === 0 ? (
-                    <div className="py-4 text-center text-xs text-stone-400">
-                        No items yet — add foods below
-                    </div>
-                ) : (
-                    <div className="space-y-1.5 mb-2">
-                        {items.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between bg-stone-50 dark:bg-stone-800 p-3 rounded-xl">
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium text-stone-700 dark:text-stone-200 truncate">{item.name}</div>
-                                    <div className="flex gap-2 mt-0.5">
-                                        {item.protein > 0 && <span className="text-[10px] text-violet-600 dark:text-violet-300 font-medium">{item.protein}g pro</span>}
-                                        {item.calories > 0 && <span className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">{item.calories} cal</span>}
-                                    </div>
-                                </div>
-                                <button onClick={() => handleRemoveItem(idx)}
-                                    className="p-1.5 text-stone-300 hover:text-red-500 rounded-lg transition-colors active:scale-90 ml-2 shrink-0">
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* Add food to meal */}
-                {showFoodSearch ? (
-                    <InlineFoodSearch
-                        recentFoods={recentFoods}
-                        onSelect={handleAddFoodToMeal}
-                        onClose={() => setShowFoodSearch(false)}
-                    />
-                ) : (
-                    <button
-                        onClick={() => setShowFoodSearch(true)}
-                        className="w-full py-2.5 border border-dashed border-stone-200 dark:border-stone-700 rounded-xl text-stone-400 font-medium text-xs flex items-center justify-center gap-1.5 hover:border-violet-300 dark:hover:border-violet-700 hover:text-violet-500 transition-all active:scale-[0.98]"
-                    >
-                        <Plus size={13} /> Add Food Item
-                    </button>
-                )}
-            </div>
-
-            {/* Save */}
-            <button
-                onClick={handleSave}
-                disabled={!canSave}
-                className="w-full py-3.5 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-                <Save size={15} /> {isEdit ? 'Save Changes' : 'Save Meal'}
-            </button>
-        </div>
-    );
-};
-
-// ── INLINE FOOD SEARCH — used inside the meal editor ─────────────────────────
-const InlineFoodSearch = ({ recentFoods, onSelect, onClose }) => {
-    const [query, setQuery] = useState('');
-    const [customMode, setCustomMode] = useState(false);
-    const [custom, setCustom] = useState({ name: '', protein: '', calories: '' });
-    const inputRef = useRef(null);
-
-    useEffect(() => { inputRef.current?.focus(); }, []);
-
-    const results = useMemo(() => {
-        if (!query || query.length < 1) return [];
-        const all = [...(recentFoods || []), ...FOOD_LIBRARY];
-        const unique = Array.from(new Map(all.map(f => [f.name, f])).values());
-        return unique.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
-    }, [query, recentFoods]);
-
-    const handleCustomAdd = () => {
-        if (!custom.name.trim()) return;
-        onSelect({ name: custom.name.trim(), protein: safeInt(custom.protein), calories: safeInt(custom.calories) });
-    };
-
-    return (
-        <div className="bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
-            {/* Toggle */}
-            <div className="flex border-b border-stone-100 dark:border-stone-700">
-                <button onClick={() => setCustomMode(false)}
-                    className={`flex-1 py-2 text-xs font-bold transition-colors ${!customMode ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>
-                    Search
-                </button>
-                <button onClick={() => setCustomMode(true)}
-                    className={`flex-1 py-2 text-xs font-bold transition-colors ${customMode ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>
-                    Custom
-                </button>
-            </div>
-
-            {!customMode ? (
-                <div className="p-2 space-y-1">
-                    <div className="relative">
-                        <input
-                            ref={inputRef}
-                            className="w-full p-2.5 pl-8 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
-                            placeholder="Search food..."
-                            value={query}
-                            onChange={e => setQuery(e.target.value)}
-                        />
-                        <Search size={14} className="absolute left-2.5 top-3 text-stone-400" />
-                    </div>
-                    {results.length > 0 && (
-                        <div className="space-y-0.5 max-h-40 overflow-y-auto">
-                            {results.map((item, i) => (
-                                <button key={i} onClick={() => onSelect(item)}
-                                    className="w-full flex justify-between items-center p-2.5 text-left hover:bg-white dark:hover:bg-stone-900 rounded-lg transition-colors active:scale-[0.98]">
-                                    <span className="text-sm text-stone-700 dark:text-stone-200 font-medium truncate flex-1">{item.name}</span>
-                                    <span className="text-xs text-stone-400 shrink-0 ml-2">{item.protein}g · {item.calories}c</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    {query.length > 1 && results.length === 0 && (
-                        <p className="text-xs text-stone-400 text-center py-2">No match — try Custom tab</p>
-                    )}
-                </div>
-            ) : (
-                <div className="p-2 space-y-2">
-                    <input
-                        className="w-full p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
-                        placeholder="Food name"
-                        value={custom.name}
-                        onChange={e => setCustom(c => ({ ...c, name: e.target.value }))}
-                        autoFocus
-                    />
-                    <div className="flex gap-2">
-                        <input type="number" inputMode="numeric"
-                            className="flex-1 p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
-                            placeholder="Protein (g)"
-                            value={custom.protein}
-                            onChange={e => setCustom(c => ({ ...c, protein: e.target.value }))}
-                        />
-                        <input type="number" inputMode="numeric"
-                            className="flex-1 p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
-                            placeholder="Calories"
-                            value={custom.calories}
-                            onChange={e => setCustom(c => ({ ...c, calories: e.target.value }))}
-                        />
-                    </div>
-                    <button
-                        onClick={handleCustomAdd}
-                        disabled={!custom.name.trim()}
-                        className="w-full py-2 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-lg text-xs disabled:opacity-40 active:scale-[0.98] transition-transform"
-                    >
-                        Add Item
-                    </button>
-                </div>
-            )}
-
-            {/* Cancel */}
-            <div className="px-2 pb-2">
-                <button onClick={onClose}
-                    className="w-full py-1.5 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// --- COMPONENTS ---
 
 const WeightUpdateModal = ({ isOpen, onClose, currentWeight, onUpdate }) => {
     const [weight, setWeight] = useState(currentWeight || '');
@@ -1856,6 +1494,293 @@ const ProgressBar = ({ current, target, colorClass, icon: Icon, label, unit, sho
     );
 };
 
+// ── INLINE FOOD SEARCH — used inside EntryEditor ─────────────────────────────
+const InlineFoodSearch = ({ recentFoods, onSelect, onClose }) => {
+    const [query, setQuery] = useState('');
+    const [customMode, setCustomMode] = useState(false);
+    const [custom, setCustom] = useState({ name: '', protein: '', calories: '' });
+    const inputRef = useRef(null);
+
+    useEffect(() => { inputRef.current?.focus(); }, []);
+
+    const results = useMemo(() => {
+        if (!query || query.length < 1) return [];
+        const all = [...(recentFoods || []), ...FOOD_LIBRARY];
+        const unique = Array.from(new Map(all.map(f => [f.name, f])).values());
+        return unique.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
+    }, [query, recentFoods]);
+
+    return (
+        <div className="bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
+            <div className="flex border-b border-stone-100 dark:border-stone-700">
+                <button onClick={() => setCustomMode(false)} className={`flex-1 py-2 text-xs font-bold transition-colors ${!customMode ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>Search</button>
+                <button onClick={() => setCustomMode(true)} className={`flex-1 py-2 text-xs font-bold transition-colors ${customMode ? 'bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>Custom</button>
+            </div>
+            {!customMode ? (
+                <div className="p-2 space-y-1">
+                    <div className="relative">
+                        <input ref={inputRef}
+                            className="w-full p-2.5 pl-8 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                            placeholder="Search food..." value={query} onChange={e => setQuery(e.target.value)} />
+                        <Search size={14} className="absolute left-2.5 top-3 text-stone-400" />
+                    </div>
+                    {results.length > 0 && (
+                        <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                            {results.map((item, i) => (
+                                <button key={i} onClick={() => onSelect(item)}
+                                    className="w-full flex justify-between items-center p-2.5 text-left hover:bg-white dark:hover:bg-stone-900 rounded-lg transition-colors active:scale-[0.98]">
+                                    <span className="text-sm text-stone-700 dark:text-stone-200 font-medium truncate flex-1">{item.name}</span>
+                                    <span className="text-xs text-stone-400 shrink-0 ml-2">{item.protein}g · {item.calories}c</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {query.length > 1 && results.length === 0 && <p className="text-xs text-stone-400 text-center py-2">No match — try Custom tab</p>}
+                </div>
+            ) : (
+                <div className="p-2 space-y-2">
+                    <input className="w-full p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                        placeholder="Food name" value={custom.name} onChange={e => setCustom(c => ({...c, name: e.target.value}))} autoFocus />
+                    <div className="flex gap-2">
+                        <input type="number" inputMode="numeric"
+                            className="flex-1 p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                            placeholder="Protein (g)" value={custom.protein} onChange={e => setCustom(c => ({...c, protein: e.target.value}))} />
+                        <input type="number" inputMode="numeric"
+                            className="flex-1 p-2.5 bg-white dark:bg-stone-900 rounded-lg text-sm text-stone-800 dark:text-stone-100 border-0 outline-none focus:ring-1 focus:ring-violet-400"
+                            placeholder="Calories" value={custom.calories} onChange={e => setCustom(c => ({...c, calories: e.target.value}))} />
+                    </div>
+                    <button onClick={() => { if (!custom.name.trim()) return; onSelect({ name: custom.name.trim(), protein: safeInt(custom.protein), calories: safeInt(custom.calories) }); }}
+                        disabled={!custom.name.trim()}
+                        className="w-full py-2 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-lg text-xs disabled:opacity-40 active:scale-[0.98] transition-transform">
+                        Add Item
+                    </button>
+                </div>
+            )}
+            <div className="px-2 pb-2">
+                <button onClick={onClose} className="w-full py-1.5 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">Cancel</button>
+            </div>
+        </div>
+    );
+};
+
+// ── ENTRY EDITOR — create/edit a food OR a meal ──────────────────────────────
+const EntryEditor = ({ entry, type: initialType, recentFoods, onSave, onCancel }) => {
+    const [entryType, setEntryType] = useState(entry?._type || initialType || 'food');
+    const [name, setName] = useState(entry?.name || '');
+    const [protein, setProtein] = useState(entry?.protein != null ? String(entry.protein) : '');
+    const [calories, setCalories] = useState(entry?.calories != null ? String(entry.calories) : '');
+    const [items, setItems] = useState(entry?.items ? [...entry.items] : []);
+    const [showSearch, setShowSearch] = useState(false);
+
+    const isEdit = !!entry;
+    const isMeal = entryType === 'meal';
+    const mealTotalsCalc = useMemo(() => computeTotals(items), [items]);
+
+    const handleSave = () => {
+        if (!name.trim()) return;
+        haptic.success();
+        if (isMeal) {
+            onSave({ ...(entry || {}), name: name.trim(), items }, 'meal');
+        } else {
+            onSave({ name: name.trim(), protein: safeInt(protein), calories: safeInt(calories) }, 'food');
+        }
+    };
+
+    const canSave = name.trim().length > 0 && (isMeal ? items.length > 0 : (safeInt(protein) > 0 || safeInt(calories) > 0));
+    const inp = "w-full p-3.5 bg-stone-50 dark:bg-stone-800 rounded-xl border-0 focus:ring-2 focus:ring-violet-500 text-stone-800 dark:text-stone-100 outline-none";
+
+    return (
+        <div className="space-y-4 animate-fade-in">
+            <div className="flex items-center gap-2">
+                <button onClick={onCancel} className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 active:scale-90"><ChevronLeft size={20}/></button>
+                <h4 className="font-bold text-stone-800 dark:text-stone-100 text-sm">{isEdit ? `Edit ${entry._type === 'meal' ? 'Meal' : 'Food'}` : 'New Entry'}</h4>
+            </div>
+            {!isEdit && (
+                <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+                    {['food','meal'].map(t => (
+                        <button key={t} onClick={() => setEntryType(t)}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all capitalize ${entryType === t ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-400'}`}>
+                            {t}
+                        </button>
+                    ))}
+                </div>
+            )}
+            <div>
+                <label className="text-xs text-stone-400 ml-1 block mb-1">Name</label>
+                <input className={inp} placeholder={isMeal ? 'e.g. "Post-Workout Shake"' : 'e.g. "Chicken Breast"'}
+                    value={name} onChange={e => setName(e.target.value)} autoFocus={!isEdit} />
+            </div>
+            {!isMeal && (
+                <div className="flex gap-3">
+                    <div className="flex-1">
+                        <label className="text-xs text-stone-400 ml-1 block mb-1">Protein (g)</label>
+                        <input type="number" inputMode="numeric" className={inp} placeholder="0" value={protein} onChange={e => setProtein(e.target.value)} />
+                    </div>
+                    <div className="flex-1">
+                        <label className="text-xs text-stone-400 ml-1 block mb-1">Calories</label>
+                        <input type="number" inputMode="numeric" className={inp} placeholder="0" value={calories} onChange={e => setCalories(e.target.value)} />
+                    </div>
+                </div>
+            )}
+            {isMeal && (
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs text-stone-400 ml-1">Items</label>
+                        {items.length > 0 && <span className="text-xs text-stone-400">{mealTotalsCalc.protein}g · {mealTotalsCalc.calories} cal</span>}
+                    </div>
+                    {items.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                            {items.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between bg-stone-50 dark:bg-stone-800 p-3 rounded-xl">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium text-stone-700 dark:text-stone-200 truncate">{item.name}</div>
+                                        <div className="flex gap-2 mt-0.5">
+                                            {item.protein > 0 && <span className="text-[10px] text-violet-600 dark:text-violet-300">{item.protein}g pro</span>}
+                                            {item.calories > 0 && <span className="text-[10px] text-orange-600 dark:text-orange-400">{item.calories} cal</span>}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setItems(prev => prev.filter((_,i) => i !== idx))}
+                                        className="p-1.5 text-stone-300 hover:text-red-500 rounded-lg active:scale-90 ml-2 shrink-0"><X size={14}/></button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {showSearch ? (
+                        <InlineFoodSearch recentFoods={recentFoods}
+                            onSelect={(food) => { haptic.light(); setItems(prev => [...prev, { name: food.name, protein: safeInt(food.protein), calories: safeInt(food.calories) }]); setShowSearch(false); }}
+                            onClose={() => setShowSearch(false)} />
+                    ) : (
+                        <button onClick={() => setShowSearch(true)}
+                            className="w-full py-2.5 border border-dashed border-stone-200 dark:border-stone-700 rounded-xl text-stone-400 text-xs flex items-center justify-center gap-1.5 hover:border-violet-300 hover:text-violet-500 transition-all active:scale-[0.98]">
+                            <Plus size={13}/> Add Food Item
+                        </button>
+                    )}
+                </div>
+            )}
+            <button onClick={handleSave} disabled={!canSave}
+                className="w-full py-3.5 bg-stone-800 dark:bg-stone-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-transform">
+                <Save size={15}/> {isEdit ? 'Save Changes' : 'Save'}
+            </button>
+        </div>
+    );
+};
+
+// ── UNIFIED MY FOODS + MEALS PANEL (inside modal) ────────────────────────────
+const MyFoodsPanel = ({ recentFoods, onLogEntry, onFoodsChanged }) => {
+    const [meals, setMeals] = useState(DB.getMeals());
+    const [localFoods, setLocalFoods] = useState(recentFoods || []);
+    const [editingEntry, setEditingEntry] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [creating, setCreating] = useState(false);
+
+    const refreshAll = () => {
+        const f = DB.getRecentFoods();
+        setLocalFoods(f);
+        setMeals(DB.getMeals());
+        onFoodsChanged?.(f);
+    };
+
+    const allEntries = [
+        ...meals.map(m => ({ ...m, _type: 'meal', _totals: computeTotals(m.items || []) })).sort((a,b) => (b.createdAt||0)-(a.createdAt||0)),
+        ...localFoods.map((f,i) => ({ ...f, _type: 'food', _index: i, _totals: { protein: safeInt(f.protein), calories: safeInt(f.calories) } })),
+    ];
+
+    if (creating || editingEntry) {
+        return (
+            <EntryEditor
+                entry={editingEntry?.data}
+                type={editingEntry?.type || 'food'}
+                recentFoods={localFoods}
+                onSave={(saved, type) => {
+                    if (type === 'meal') {
+                        if (editingEntry) DB.updateMeal(saved.id, saved);
+                        else DB.addMeal(saved);
+                    } else {
+                        if (editingEntry) DB.updateRecentFood(editingEntry.data.name, saved);
+                        else DB.addRecentFood(saved);
+                    }
+                    refreshAll();
+                    setCreating(false);
+                    setEditingEntry(null);
+                }}
+                onCancel={() => { setCreating(false); setEditingEntry(null); }}
+            />
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            <button onClick={() => setCreating(true)}
+                className="w-full py-3 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-2xl text-stone-500 dark:text-stone-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-violet-300 dark:hover:border-violet-700 hover:text-violet-600 dark:hover:text-violet-300 transition-all active:scale-[0.98]">
+                <Plus size={15} /> Save a Food or Meal
+            </button>
+            {allEntries.length === 0 ? (
+                <div className="text-center py-8">
+                    <div className="w-12 h-12 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <ChefHat size={20} className="text-stone-400" />
+                    </div>
+                    <p className="text-sm font-bold text-stone-600 dark:text-stone-300 mb-1">Nothing saved yet</p>
+                    <p className="text-xs text-stone-400">Save foods or meals to log them in one tap.</p>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {allEntries.map((entry, idx) => {
+                        const key = entry._type === 'meal' ? `meal-${entry.id}` : `food-${idx}`;
+                        const isDeleting = confirmDelete === key;
+                        return (
+                            <div key={key} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 overflow-hidden">
+                                {isDeleting ? (
+                                    <div className="p-4">
+                                        <p className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">Remove &ldquo;{entry.name}&rdquo;?</p>
+                                        <p className="text-xs text-stone-400 mb-3">Past logs are unaffected.</p>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-500 font-bold rounded-xl text-sm active:scale-95">Keep</button>
+                                            <button onClick={() => {
+                                                haptic.error();
+                                                if (entry._type === 'meal') DB.deleteMeal(entry.id);
+                                                else DB.deleteRecentFood(entry.name);
+                                                setConfirmDelete(null);
+                                                refreshAll();
+                                            }} className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl text-sm active:scale-95">Remove</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-stone-800 dark:text-stone-100 text-sm truncate">{entry.name}</span>
+                                                    {entry._type === 'meal' && (
+                                                        <span className="text-[9px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded-md uppercase tracking-wide">Meal</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2 mt-1">
+                                                    {entry._totals.protein > 0 && <span className="text-[10px] bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-md font-medium">{entry._totals.protein}g pro</span>}
+                                                    {entry._totals.calories > 0 && <span className="text-[10px] bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-md font-medium">{entry._totals.calories} cal</span>}
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-1 ml-2 shrink-0">
+                                                <button onClick={() => setEditingEntry({ type: entry._type, data: entry })}
+                                                    className="p-2 text-stone-300 hover:text-violet-500 rounded-lg active:scale-90 transition-colors"><Edit3 size={14}/></button>
+                                                <button onClick={() => setConfirmDelete(key)}
+                                                    className="p-2 text-stone-300 hover:text-red-500 rounded-lg active:scale-90 transition-colors"><X size={14}/></button>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => { haptic.success(); onLogEntry(entry); }}
+                                            className="w-full py-2 bg-stone-800 dark:bg-stone-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform">
+                                            <Plus size={13} /> Log {entry._type === 'meal' ? 'Meal' : 'Food'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ── ADD FOOD MODAL — 2 tabs: Search | My Foods ───────────────────────────────
 const AddFoodModal = ({ isOpen, onClose, onAdd, recentFoods, onSaveCustom, initialData, onLogMeal, onFoodsChanged }) => {
     const [mode, setMode] = useState('search');
@@ -2620,7 +2545,7 @@ const Steady = () => {
         const merged = [...(logs?.items || []), ...newItems];
         updateLog({ items: merged });
         trackEvent('meal_logged', { meal_name: meal.name, item_count: newItems.length, date: selectedDate });
-        const t = mealTotals(meal);
+        const t = computeTotals(meal.items || []);
         setToast({ message: `Logged "${meal.name}" — ${t.protein}g protein`, type: 'success' });
     }, [logs, updateLog, selectedDate]);
 
@@ -2637,13 +2562,7 @@ const Steady = () => {
         updateLog({ items: newItems });
     }, [logs, updateLog]);
 
-    const handleQuickAdd = useCallback((food) => {
-        const newFood = { ...food, loggedAt: Date.now(), servings: 1, baseProtein: safeInt(food.protein), baseCalories: safeInt(food.calories) };
-        const newItems = [...(logs?.items || []), newFood];
-        updateLog({ items: newItems });
-        if (food.name && food.name !== 'Quick Add') { DB.addRecentFood(food); setRecentFoods(DB.getRecentFoods()); }
-        setToast({ message: `Added ${food.name.split(' (')[0]}`, type: 'success' });
-    }, [logs, updateLog]);
+
 
     const handleCopyYesterday = useCallback(() => {
         const yesterdayLog = DB.getLog(getYesterdayStr());
