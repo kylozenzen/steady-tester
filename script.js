@@ -425,11 +425,11 @@ subway: {
 name: "Subway",
 color: "bg-green-600",
 items: [
-{ name: "Turkey Breast 6" (no cheese)", protein: 18, calories: 280, badge: "best", note: "Classic lean choice" },
-{ name: "Chicken Breast 6"", protein: 23, calories: 320, badge: "best", note: "Most protein per calorie" },
-{ name: "Veggie Delite 6"", protein: 8, calories: 200, badge: "solid", note: "Lightest option available" },
-{ name: "Steak & Cheese 6"", protein: 26, calories: 380, badge: "solid", note: "Good protein, moderate calories" },
-{ name: "Meatball Marinara 6"", protein: 22, calories: 480, badge: "aware", note: "Tasty but higher calorie" },
+{ name: 'Turkey Breast 6" (no cheese)', protein: 18, calories: 280, badge: "best", note: "Classic lean choice" },
+{ name: 'Chicken Breast 6"', protein: 23, calories: 320, badge: "best", note: "Most protein per calorie" },
+{ name: 'Veggie Delite 6"', protein: 8, calories: 200, badge: "solid", note: "Lightest option available" },
+{ name: 'Steak & Cheese 6"', protein: 26, calories: 380, badge: "solid", note: "Good protein, moderate calories" },
+{ name: 'Meatball Marinara 6"', protein: 22, calories: 480, badge: "aware", note: "Tasty but higher calorie" },
 { name: "Footlong BMT", protein: 34, calories: 860, badge: "aware", note: "Save half for later" },
 ]
 },
