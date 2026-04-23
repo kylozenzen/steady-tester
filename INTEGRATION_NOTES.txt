@@ -1,0 +1,6 @@
+Steady integration package:
+- Root / serves landing page (index.html)
+- App lives under /app/
+- PWA manifest start_url and scope updated to /app/
+- Service worker moved to /app/sw.js and caches /app assets
+- Netlify redirects /app and /app/* to /app/index.html
