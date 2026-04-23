@@ -1514,28 +1514,40 @@
     @media (max-width: 768px) {
       .hero {
         min-height: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
         padding-bottom: 80px;
       }
 
       .hero .container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        width: 100%;
       }
 
       .hero-content {
+        width: 100%;
         max-width: 100%;
+      }
+
+      .hero-sub {
+        max-width: none;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
       }
 
       .hero-visual {
         display: block;
-        position: relative;
+        position: static;
         top: auto;
         right: auto;
         transform: none;
         animation: none;
-        margin: 40px auto 0;
-        width: min(310px, calc(100vw - 48px));
+        margin: 28px auto 0;
+        width: min(72vw, 280px);
+        max-width: 280px;
       }
 
       .mockup-frame {
