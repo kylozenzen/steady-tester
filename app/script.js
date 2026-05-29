@@ -24,15 +24,8 @@ window.gtag('event', name, params);
 } catch (e) {}
 }
 
-if ('serviceWorker' in navigator) {
-window.addEventListener('load', () => {
-navigator.serviceWorker
-.register('/sw.js')
-.catch((err) => {
-console.error('Service worker registration failed:', err);
-});
-});
-}
+// Service worker registration lives in app/index.html so the app shell owns
+// the /app/ PWA scope and script.js can focus on the React experience.
 
 function safeNum(n) {
 const x = Number(n);
@@ -1925,6 +1918,20 @@ return (
                                 <span className="font-medium">{(safeInt(food.calories)/safeInt(food.protein)).toFixed(1)}</span> cal per gram of protein
                             </div>
                         )}
+                        <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800 p-4 rounded-2xl">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Sparkles size={15} className="text-teal-600 dark:text-teal-300" />
+                                <span className="font-bold text-teal-800 dark:text-teal-200 text-sm">Make this meal steadier</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-teal-700 dark:text-teal-300">
+                                {['Add protein', 'Add fiber', 'Add color', 'Add water', 'Save it if repeated'].map((tip) => (
+                                    <div key={tip} className="flex items-center gap-1.5">
+                                        <Check size={12} className="shrink-0" />
+                                        <span>{tip}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <button onClick={handleSubmit} disabled={!canSubmit}
                             className="w-full py-4 bg-stone-800 dark:bg-stone-700 text-stone-50 font-bold rounded-2xl shadow-lg hover:bg-stone-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
                             {initialData ? 'Save Changes' : 'Add Food'}
@@ -2335,6 +2342,165 @@ return (
 
 };
 
+const VisceralFatGuide = () => {
+const checklist = [
+    'Hit protein at most meals',
+    'Add fiber daily',
+    'Eat colorful plants',
+    'Strength train 3–4x per week',
+    'Do low-impact cardio 2–4x per week',
+    'Reduce sugary drinks',
+    'Keep alcohol limited',
+    'Sleep as consistently as possible',
+    'Track meals without chasing perfection'
+];
+
+const mealExamples = [
+    'Lean ground beef or turkey + rice + peppers/onions + salsa',
+    'Eggs + oats + berries',
+    'Greek yogurt + berries + nuts',
+    'Chicken/tuna + beans + spinach + avocado',
+    'Cottage cheese + fruit + whole grain toast',
+    'Beans/lentils + rice + frozen vegetables'
+];
+
+const budgetFoods = [
+    { title: 'Proteins', items: ['Eggs', 'Greek yogurt', 'Cottage cheese', 'Canned tuna', 'Canned chicken', 'Chicken breast or thighs', 'Lean ground beef', 'Ground turkey', 'Beans', 'Lentils'] },
+    { title: 'Fiber/carbs', items: ['Oats', 'Brown or white rice', 'Potatoes', 'Sweet potatoes', 'Beans', 'Lentils', 'Whole grain wraps', 'Frozen fruit'] },
+    { title: 'Color/produce', items: ['Frozen vegetables', 'Spinach', 'Peppers', 'Carrots', 'Broccoli', 'Berries', 'Apples', 'Salsa'] },
+    { title: 'Healthy fats', items: ['Olive oil', 'Avocado', 'Nuts', 'Seeds', 'Peanut butter in controlled portions'] }
+];
+
+const weeklyStructure = [
+    '3 strength days',
+    '2 cardio days',
+    '1 optional mobility/walk day',
+    '1 rest day'
+];
+
+const weeklyExample = [
+    ['Monday', 'Strength A'],
+    ['Tuesday', 'Low-impact cardio'],
+    ['Wednesday', 'Strength B'],
+    ['Thursday', 'Walk, swim, mobility, or rest'],
+    ['Friday', 'Strength C'],
+    ['Saturday', 'Cardio or longer walk'],
+    ['Sunday', 'Rest/prep']
+];
+
+const lowImpact = ['Stationary bike', 'Swimming', 'Incline walking if tolerated', 'Elliptical', 'Rowing if tolerated', 'Water walking', 'Short walking intervals'];
+const steadyTrack = ['Protein', 'Calories', 'Fiber-friendly foods', 'Water', 'Weight trend over time', 'Consistency, not perfect days'];
+
+return (
+    <div className="space-y-4 animate-fade-in">
+        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-teal-500 p-6 rounded-3xl text-white shadow-lg shadow-violet-200/40 dark:shadow-none overflow-hidden relative">
+            <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full"></div>
+            <div className="relative">
+                <div className="w-11 h-11 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
+                    <Heart size={22} />
+                </div>
+                <h3 className="text-2xl font-black tracking-tight">Visceral Fat Guide</h3>
+                <p className="text-sm text-white/85 mt-2 leading-relaxed">Simple habits that support better metabolic health, steadier meals, and long-term fat loss.</p>
+            </div>
+        </div>
+
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 p-4 rounded-2xl flex gap-3">
+            <Info size={18} className="text-amber-600 dark:text-amber-300 shrink-0 mt-0.5" />
+            <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-200">Educational only. Not medical advice. Talk with a clinician before major diet or exercise changes, especially if you take thyroid medication, have diabetes risk, heart concerns, or significant symptoms.</p>
+        </div>
+
+        <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm">
+            <h4 className="font-black text-stone-800 dark:text-stone-100 flex items-center gap-2 mb-3"><Target size={18} className="text-violet-600 dark:text-violet-300" /> What visceral fat is</h4>
+            <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed mb-3">Visceral fat is the deeper abdominal fat that sits around organs. You can’t crunch it away directly, but it often responds well to consistent nutrition, strength training, cardio, better sleep, and less ultra-processed food.</p>
+            <div className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
+                <p>It is different from pinchable subcutaneous fat, and higher amounts are associated with higher metabolic risk.</p>
+                <p>You cannot spot-reduce belly fat. The practical approach is reducing total body fat while building muscle and improving daily habits.</p>
+            </div>
+        </div>
+
+        <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm">
+            <h4 className="font-black text-stone-800 dark:text-stone-100 flex items-center gap-2 mb-4"><Check size={18} className="text-teal-600 dark:text-teal-300" /> The main checklist</h4>
+            <div className="space-y-2">
+                {checklist.map((item) => (
+                    <div key={item} className="flex items-start gap-3 bg-stone-50 dark:bg-stone-800/80 p-3 rounded-2xl">
+                        <div className="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center shrink-0 mt-0.5"><Check size={12} className="text-teal-700 dark:text-teal-300" /></div>
+                        <span className="text-sm text-stone-700 dark:text-stone-300">{item}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm space-y-4">
+            <h4 className="font-black text-stone-800 dark:text-stone-100 flex items-center gap-2"><Utensils size={18} className="text-orange-500" /> Food guide</h4>
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-2xl p-4">
+                <div className="text-xs uppercase tracking-wider font-black text-orange-600 dark:text-orange-300 mb-1">Build a steadier meal</div>
+                <div className="text-sm font-bold text-orange-900 dark:text-orange-100">Protein + fiber carb + colorful plant + healthy fat</div>
+            </div>
+            <div>
+                <h5 className="text-sm font-bold text-stone-700 dark:text-stone-200 mb-2">Examples</h5>
+                <div className="space-y-2">
+                    {mealExamples.map((meal) => <div key={meal} className="text-sm text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 rounded-2xl px-3 py-2">{meal}</div>)}
+                </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {budgetFoods.map((group) => (
+                    <div key={group.title} className="bg-stone-50 dark:bg-stone-800 rounded-2xl p-4">
+                        <h5 className="text-sm font-black text-stone-800 dark:text-stone-100 mb-2">{group.title}</h5>
+                        <div className="flex flex-wrap gap-1.5">
+                            {group.items.map((item) => <span key={item} className="text-[11px] bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-700 text-stone-600 dark:text-stone-300 px-2 py-1 rounded-lg">{item}</span>)}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm space-y-4">
+            <h4 className="font-black text-stone-800 dark:text-stone-100 flex items-center gap-2"><Dumbbell size={18} className="text-violet-600 dark:text-violet-300" /> Movement guide</h4>
+            <div className="space-y-2 text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                <p>Strength training helps preserve or build muscle. More muscle can support recomposition and long-term weight management.</p>
+                <p>Cardio can help improve energy use, heart health, and calorie burn. Low-impact options are great if knees or joints are a concern.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+                {weeklyStructure.map((item) => <div key={item} className="bg-violet-50 dark:bg-violet-900/20 text-violet-800 dark:text-violet-200 text-xs font-bold rounded-2xl p-3">{item}</div>)}
+            </div>
+            <div className="bg-stone-50 dark:bg-stone-800 rounded-2xl p-4">
+                <h5 className="text-sm font-black text-stone-800 dark:text-stone-100 mb-3">Sample week</h5>
+                <div className="space-y-2">
+                    {weeklyExample.map(([day, plan]) => (
+                        <div key={day} className="flex justify-between gap-3 text-sm">
+                            <span className="font-bold text-stone-700 dark:text-stone-200">{day}</span>
+                            <span className="text-stone-500 dark:text-stone-400 text-right">{plan}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <div>
+                <h5 className="text-sm font-bold text-stone-700 dark:text-stone-200 mb-2 flex items-center gap-2"><Activity size={15} /> Low-impact cardio options</h5>
+                <div className="flex flex-wrap gap-1.5">
+                    {lowImpact.map((item) => <span key={item} className="text-[11px] bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 px-2 py-1 rounded-lg">{item}</span>)}
+                </div>
+            </div>
+        </div>
+
+        <div className="bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 p-4 rounded-2xl flex gap-3">
+            <AlertCircle size={18} className="text-cyan-700 dark:text-cyan-300 shrink-0 mt-0.5" />
+            <div>
+                <h4 className="font-black text-cyan-900 dark:text-cyan-100 text-sm mb-1">Medication timing note</h4>
+                <p className="text-xs leading-relaxed text-cyan-800 dark:text-cyan-200">If you take levothyroxine, take it as prescribed. Calcium, iron, and high-fiber supplements can interfere with absorption when taken too close to it. Follow your clinician’s instructions for timing.</p>
+            </div>
+        </div>
+
+        <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm space-y-4">
+            <h4 className="font-black text-stone-800 dark:text-stone-100 flex items-center gap-2"><Scale size={18} className="text-teal-600 dark:text-teal-300" /> What to track inside Steady</h4>
+            <div className="grid grid-cols-2 gap-2">
+                {steadyTrack.map((item) => <div key={item} className="bg-stone-50 dark:bg-stone-800 rounded-2xl p-3 text-sm text-stone-700 dark:text-stone-300">{item}</div>)}
+            </div>
+            <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 rounded-2xl p-4">Steady is not here to yell at you. It is here to help you notice patterns. One high-calorie day does not ruin progress. A repeatable week matters more than a perfect Tuesday.</p>
+        </div>
+    </div>
+);
+};
+
 const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
 const [activeTab, setActiveTab] = useState('basics');
 const [filter, setFilter] = useState('all');
@@ -2352,14 +2518,18 @@ const showSuggestion = proteinRemaining > 20;
 
 return (
     <div className="space-y-4 animate-fade-in">
-        <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+        <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl overflow-x-auto scrollbar-hide">
             <button onClick={() => setActiveTab('basics')}
-                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'basics' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
-                <BookOpen size={16} /> Basics
+                className={`min-w-0 flex-1 py-2.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === 'basics' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
+                <BookOpen size={15} /> Basics
             </button>
             <button onClick={() => setActiveTab('fastfood')}
-                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'fastfood' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
-                <Store size={16} /> Dining Out
+                className={`min-w-0 flex-1 py-2.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === 'fastfood' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
+                <Store size={15} /> Dining
+            </button>
+            <button onClick={() => setActiveTab('visceral')}
+                className={`min-w-0 flex-1 py-2.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === 'visceral' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
+                <Heart size={15} /> Guide
             </button>
         </div>
         
@@ -2409,8 +2579,10 @@ return (
                     })}
                 </div>
             </>
-        ) : (
+        ) : activeTab === 'fastfood' ? (
             <FastFoodGuide onLogFood={onLogFood} />
+        ) : (
+            <VisceralFatGuide />
         )}
     </div>
 );
