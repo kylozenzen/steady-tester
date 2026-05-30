@@ -2501,6 +2501,240 @@ return (
 );
 };
 
+const PRACTICAL_GUIDES = [
+{
+    id: 'better-plate',
+    title: 'Build a Better Plate',
+    subtitle: 'Simple meals. Better balance. Less guesswork.',
+    description: 'A simple meal formula for balance, fullness, and repeatable meals.',
+    icon: Utensils,
+    accent: 'text-orange-500',
+    gradient: 'from-orange-500 via-violet-600 to-teal-500',
+    intro: [
+        'A better plate does not mean a perfect plate.',
+        'It means building meals that are easier to repeat, easier to track, and more likely to keep you full without turning every meal into a math problem with feelings.'
+    ],
+    sections: [
+        { title: 'The basic formula', icon: Target, callout: 'Protein + fiber carb + color + flavor', body: ['That is the whole idea.', 'You do not need a complicated meal plan to eat better. Start with a repeatable structure:'], bullets: ['Pick a protein', 'Pick a carb or fiber-rich base', 'Add color from fruits or vegetables', 'Add flavor so the meal does not taste like punishment', 'Track it and move on'] },
+        { title: 'Why this works', icon: Activity, cards: [
+            { label: 'Fullness', text: 'Protein, fiber, and volume from fruits or vegetables can help meals feel more satisfying.' },
+            { label: 'Energy', text: 'Carbs are not the enemy. The goal is choosing portions and sources that work for your day.' },
+            { label: 'Consistency', text: 'The best meal plan is not the one that looks perfect online. It is the one you can repeat on a random Tuesday when life is acting brand new.' }
+        ] },
+        { title: 'The plate method', icon: Utensils, body: ['A simple visual target:'], groups: [
+            { label: 'Protein', items: ['Chicken', 'Eggs', 'Greek yogurt', 'Tuna', 'Lean beef', 'Turkey', 'Beans', 'Lentils', 'Tofu'] },
+            { label: 'Carb or fiber base', items: ['Rice', 'Oats', 'Potatoes', 'Beans', 'Lentils', 'Whole grain wrap', 'Fruit'] },
+            { label: 'Color', items: ['Peppers', 'Spinach', 'Carrots', 'Broccoli', 'Berries', 'Apples', 'Salsa', 'Frozen vegetables'] },
+            { label: 'Flavor', items: ['Seasoning', 'Hot sauce', 'Salsa', 'Greek yogurt sauce', 'Light dressing', 'Avocado', 'Olive oil', 'Herbs'] }
+        ] },
+        { title: 'Easy meal examples', icon: ChefHat, examples: [
+            { label: 'Ground beef bowl', text: 'Lean ground beef + rice + peppers/onions + salsa' },
+            { label: 'Chicken plate', text: 'Chicken + potatoes + broccoli + sauce or seasoning' },
+            { label: 'Breakfast bowl', text: 'Greek yogurt + berries + oats or granola' },
+            { label: 'Egg plate', text: 'Eggs + toast + fruit' },
+            { label: 'Tuna wrap', text: 'Tuna + whole grain wrap + spinach + pickles or light mayo' },
+            { label: 'Lazy dinner', text: 'Rotisserie chicken + microwave rice + frozen vegetables' },
+            { label: 'Bean bowl', text: 'Beans + rice + salsa + spinach + avocado' }
+        ] },
+        { title: 'Fast food upgrade', icon: Store, body: ['You do not have to “never eat fast food.” That is not real life. The goal is to make the meal steadier.', 'Try asking:'], bullets: ['Can I add protein?', 'Can I avoid drinking my calories?', 'Can I add a side with fiber or color?', 'Can I skip the upgrade size?', 'Can I make the next meal more balanced?'], examples: [
+            { label: 'Burger', text: 'Burger + water + side salad or fruit if available' },
+            { label: 'Sandwich', text: 'Grilled chicken sandwich + water' },
+            { label: 'Bowl', text: 'Burrito bowl with beans, protein, salsa, and vegetables' },
+            { label: 'Smaller combo', text: 'Kids meal or smaller combo when you want the taste without the full calorie blast radius' }
+        ] },
+        { title: 'What to track in Steady', icon: Scale, body: ['Track the things that help you notice patterns:'], bullets: ['Calories', 'Protein', 'Water', 'Repeat meals', 'Meals that keep you full', 'Meals that leave you hungry one hour later', 'Simple upgrades you can repeat'], note: 'Steady is not here to grade your plate. It is here to help you see what works.' },
+        { title: 'Quick checklist', icon: Check, body: ['Before or after a meal, ask:'], bullets: ['Did I get protein?', 'Did I get some fiber or color?', 'Did I drink water today?', 'Is this meal repeatable?', 'Did I track it honestly enough to learn from it?'] }
+    ],
+    closing: ['A better plate is not a perfect plate.', 'It is a plate that helps future-you stop opening the fridge like there is a plot twist inside.']
+},
+{
+    id: 'protein',
+    title: 'Protein Guide',
+    subtitle: 'Stay full. Support muscle. Make meals easier.',
+    description: 'Practical ways to add protein for fullness, strength, and consistency.',
+    icon: Dumbbell,
+    accent: 'text-violet-600 dark:text-violet-300',
+    gradient: 'from-violet-600 via-violet-600 to-teal-500',
+    intro: [
+        'Protein is one of the most useful anchors in a food tracking app because it helps meals feel more satisfying and supports muscle repair and maintenance.',
+        'That matters whether your goal is fat loss, recomposition, strength, energy, or simply not feeling like a raccoon searching the pantry at 10:47 p.m.'
+    ],
+    sections: [
+        { title: 'Why protein matters', icon: Heart, body: ['Protein helps your body:'], bullets: ['Build and repair muscle', 'Maintain lean mass during weight loss', 'Recover from strength training', 'Feel fuller after meals', 'Make meals more structured and satisfying'], note: 'If you are strength training, protein becomes even more important because resistance exercise and protein work together to support muscle repair and growth.' },
+        { title: 'The simple question', icon: Target, callout: 'Where is the protein?', body: ['At each meal, ask:', 'That one question can improve a lot of meals without needing a complicated diet plan.'], examples: [
+            { label: 'Breakfast', text: 'Eggs, Greek yogurt, cottage cheese, protein shake' },
+            { label: 'Lunch', text: 'Chicken, turkey, tuna, lean beef, beans, lentils' },
+            { label: 'Dinner', text: 'Fish, chicken, beef, pork, tofu, beans, eggs' },
+            { label: 'Snacks', text: 'Greek yogurt, cottage cheese, jerky, boiled eggs, tuna packet' }
+        ] },
+        { title: 'Easy protein sources', icon: Utensils, groups: [
+            { label: 'Low effort', items: ['Greek yogurt', 'Cottage cheese', 'Eggs', 'Tuna packets', 'Canned chicken', 'Rotisserie chicken', 'Protein shake', 'Deli turkey', 'String cheese', 'Jerky'] },
+            { label: 'Meal prep friendly', items: ['Chicken breast or thighs', 'Lean ground beef', 'Ground turkey', 'Pork tenderloin', 'Turkey meatballs', 'Egg bites', 'Beans and lentils', 'Tofu or tempeh'] },
+            { label: 'Budget friendly', items: ['Eggs', 'Canned tuna', 'Canned chicken', 'Cottage cheese', 'Greek yogurt tubs', 'Beans', 'Lentils', 'Frozen chicken', 'Ground turkey', 'Lean ground beef bought in bulk'] }
+        ] },
+        { title: 'Protein without cooking', icon: Zap, body: ['Some days, cooking is not happening. That does not mean the whole day has to turn into a snack tornado.', 'Try:'], bullets: ['Greek yogurt + berries', 'Cottage cheese + fruit', 'Tuna packet + crackers', 'Rotisserie chicken + microwave rice', 'Protein shake + banana', 'Deli turkey wrap', 'Boiled eggs + toast', 'Canned chicken + salsa + tortilla'] },
+        { title: 'How much should I aim for?', icon: Info, body: ['Protein needs depend on body size, activity level, goals, and medical history.', 'A simple app-friendly approach:'], bullets: ['Start by adding protein to most meals.', 'Spread protein across the day instead of saving it all for dinner.', 'If you strength train, make protein a daily priority.', 'If you have kidney disease or a medical condition requiring protein limits, follow your clinician’s guidance.'], note: 'This guide is not here to force a perfect number. It is here to help you build better defaults.' },
+        { title: 'Meal examples', icon: ChefHat, examples: [
+            { label: 'High-protein breakfast', text: 'Greek yogurt + berries + oats' },
+            { label: 'Simple lunch', text: 'Chicken + rice + vegetables' },
+            { label: 'Fast dinner', text: 'Lean beef + potatoes + peppers' },
+            { label: 'No-cook meal', text: 'Tuna packet + whole grain crackers + carrots' },
+            { label: 'Snack plate', text: 'Cottage cheese + fruit + nuts' },
+            { label: 'Family meal upgrade', text: 'Add extra chicken, turkey, beans, or eggs to what you are already making.' }
+        ] },
+        { title: 'What to track in Steady', icon: Scale, body: ['Use Steady to notice:'], bullets: ['How much protein you usually get', 'Which meals keep you full', 'Which breakfasts prevent snack attacks', 'Which repeat meals are easiest', 'Whether strength days go better when protein is higher', 'Which protein foods fit your budget'] },
+        { title: 'Quick checklist', icon: Check, body: ['Before logging a meal, ask:'], bullets: ['Is there a clear protein source?', 'Is the portion realistic?', 'Can I repeat this meal?', 'Would adding protein make this more filling?', 'Do I need a no-cook backup option?'] }
+    ],
+    closing: ['Protein does not need to be dramatic.', 'Sometimes the win is just putting Greek yogurt in the fridge before your future self starts negotiating with a sleeve of cookies.']
+},
+{
+    id: 'fiber-fullness',
+    title: 'Fiber & Fullness Guide',
+    subtitle: 'Eat more plants. Feel fuller. Help your body do normal body things.',
+    description: 'Simple foods that support digestion, fullness, and better meal quality.',
+    icon: Leaf,
+    accent: 'text-teal-600 dark:text-teal-300',
+    gradient: 'from-teal-500 via-violet-600 to-emerald-500',
+    intro: [
+        'Fiber is a type of carbohydrate your body does not fully digest.',
+        'That may sound like a design flaw, but it is actually the point. Fiber helps support digestion, fullness, blood sugar control, gut health, and better overall food quality.',
+        'It is one of the most underrated common-sense nutrition habits.'
+    ],
+    sections: [
+        { title: 'Why fiber matters', icon: Heart, body: ['Fiber can help:'], bullets: ['Meals feel more filling', 'Digestion stay more regular', 'Blood sugar rise more gradually after meals', 'Support gut bacteria', 'Improve overall diet quality', 'Make calorie control feel less miserable'], note: 'The goal is not to become a fiber influencer. The goal is to add more real foods that help meals work better.' },
+        { title: 'The easy rule', icon: Target, callout: 'Add one fiber-friendly food to meals you already eat.', body: ['Not a total life overhaul. Just one addition.'], bullets: ['Add berries to yogurt', 'Add beans to rice bowls', 'Add spinach to eggs', 'Add peppers to ground beef', 'Add carrots with lunch', 'Add oats at breakfast', 'Add frozen vegetables to dinner', 'Add lentils to soup', 'Add an apple as a snack'] },
+        { title: 'Fiber foods that are easy to use', icon: Leaf, groups: [
+            { label: 'Breakfast', items: ['Oats', 'Berries', 'Apples', 'Chia seeds', 'Whole grain toast', 'High-fiber cereal', 'Greek yogurt with fruit'] },
+            { label: 'Lunch and dinner', items: ['Beans', 'Lentils', 'Brown rice', 'Potatoes with skin', 'Sweet potatoes', 'Whole grain wraps', 'Broccoli', 'Spinach', 'Peppers', 'Carrots', 'Frozen vegetables'] },
+            { label: 'Snacks', items: ['Apples', 'Berries', 'Carrots', 'Popcorn', 'Nuts', 'Roasted chickpeas', 'Whole grain crackers', 'Hummus with vegetables'] }
+        ] },
+        { title: 'Increase slowly', icon: Info, body: ['This part matters.', 'If you go from very little fiber to a heroic amount overnight, your stomach may file a formal complaint.', 'Add fiber gradually and drink water.', 'A good starting move:'], bullets: ['Add one fruit or vegetable per day', 'Add beans or lentils a few times per week', 'Choose oats or whole grains more often', 'Keep water nearby'] },
+        { title: 'Fiber plus protein is the cheat code', icon: Dumbbell, body: ['Protein helps with fullness.', 'Fiber helps with fullness.', 'Together, they make meals feel more complete.'], bullets: ['Greek yogurt + berries', 'Eggs + whole grain toast + fruit', 'Chicken + rice + vegetables', 'Lean beef + beans + salsa', 'Tuna wrap + carrots', 'Cottage cheese + apple', 'Turkey chili with beans'] },
+        { title: 'What about carbs?', icon: Activity, callout: 'What kind of carb is this, and what is it paired with?', body: ['Carbs are not automatically bad.', 'A carb by itself may not keep you full for long. A carb paired with protein, fiber, and flavor usually works better.'], examples: [
+            { label: 'Rice alone', text: 'Fine, but may not be very filling.' },
+            { label: 'Rice + chicken + peppers + salsa', text: 'Steadier.' },
+            { label: 'Toast alone', text: 'Fine, but may not last.' },
+            { label: 'Toast + eggs + fruit', text: 'Steadier.' },
+            { label: 'Cereal alone', text: 'Quick, but maybe not enough.' },
+            { label: 'Oats + Greek yogurt + berries', text: 'Steadier.' }
+        ] },
+        { title: 'Budget-friendly fiber upgrades', icon: Store, bullets: ['Canned beans', 'Lentils', 'Oats', 'Frozen vegetables', 'Carrots', 'Apples', 'Brown rice', 'Potatoes', 'Popcorn', 'Whole grain bread or wraps', 'Frozen berries', 'Salsa'] },
+        { title: 'What to track in Steady', icon: Scale, body: ['Steady does not need to become a fiber calculator unless the app already supports that.', 'Start by tracking patterns:'], bullets: ['Which meals keep you full longest?', 'Did you get fruits or vegetables today?', 'Did you drink enough water?', 'Are you relying mostly on low-fiber snacks?', 'Which fiber foods are easiest to repeat?', 'Are you increasing fiber slowly enough?'] },
+        { title: 'Quick checklist', icon: Check, body: ['Before or after a meal, ask:'], bullets: ['Did I add color?', 'Did I add a fiber-friendly carb?', 'Did I pair carbs with protein?', 'Did I drink water?', 'Can I repeat this without needing a cooking show budget?'] }
+    ],
+    closing: ['Fiber is not fancy.', 'It is beans, oats, berries, vegetables, potatoes, apples, and other normal foods doing surprisingly useful work while asking for absolutely no applause.']
+}
+];
+
+const GUIDE_LIBRARY = [
+    { id: 'visceral-fat', title: 'Visceral Fat Guide', subtitle: 'Understand the habits that support metabolic health and long-term fat loss.', icon: Heart, accent: 'text-violet-600 dark:text-violet-300' },
+    ...PRACTICAL_GUIDES
+];
+
+const GuideSection = ({ section, accent }) => {
+const SectionIcon = section.icon || BookOpen;
+return (
+    <section className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm space-y-4">
+        <h4 className="font-black text-stone-800 dark:text-stone-100 flex items-center gap-2">
+            <SectionIcon size={18} className={accent} /> {section.title}
+        </h4>
+        {section.callout && (
+            <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 rounded-2xl p-4 text-sm font-black text-violet-800 dark:text-violet-100 leading-relaxed">
+                {section.callout}
+            </div>
+        )}
+        {section.body && <div className="space-y-2 text-sm text-stone-600 dark:text-stone-400 leading-relaxed">{section.body.map((text) => <p key={text}>{text}</p>)}</div>}
+        {section.cards && <div className="grid gap-3 sm:grid-cols-3">{section.cards.map((card) => <div key={card.label} className="bg-stone-50 dark:bg-stone-800 rounded-2xl p-4"><h5 className="font-black text-sm text-stone-800 dark:text-stone-100 mb-1">{card.label}</h5><p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">{card.text}</p></div>)}</div>}
+        {section.groups && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{section.groups.map((group) => <div key={group.label} className="bg-stone-50 dark:bg-stone-800 rounded-2xl p-4"><h5 className="text-sm font-black text-stone-800 dark:text-stone-100 mb-2">{group.label}</h5><div className="flex flex-wrap gap-1.5">{group.items.map((item) => <span key={item} className="text-[11px] bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-700 text-stone-600 dark:text-stone-300 px-2 py-1 rounded-lg">{item}</span>)}</div></div>)}</div>}
+        {section.bullets && <div className="space-y-2">{section.bullets.map((item) => <div key={item} className="flex items-start gap-3 bg-stone-50 dark:bg-stone-800/80 p-3 rounded-2xl"><div className="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center shrink-0 mt-0.5"><Check size={12} className="text-teal-700 dark:text-teal-300" /></div><span className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">{item}</span></div>)}</div>}
+        {section.examples && <div className="space-y-2">{section.examples.map((example) => <div key={`${example.label}-${example.text}`} className="bg-stone-50 dark:bg-stone-800 rounded-2xl px-3 py-2"><div className="text-xs uppercase tracking-wide font-black text-stone-500 dark:text-stone-400">{example.label}</div><p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">{example.text}</p></div>)}</div>}
+        {section.note && <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800 rounded-2xl p-4">{section.note}</p>}
+    </section>
+);
+};
+
+const PracticalGuideView = ({ guide }) => {
+const GuideIcon = guide.icon;
+return (
+    <div className="space-y-4 animate-slide-right">
+        <div className={`bg-gradient-to-br ${guide.gradient} p-6 rounded-3xl text-white shadow-lg shadow-violet-200/40 dark:shadow-none overflow-hidden relative`}>
+            <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full"></div>
+            <div className="relative">
+                <div className="w-11 h-11 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
+                    <GuideIcon size={22} />
+                </div>
+                <h3 className="text-2xl font-black tracking-tight">{guide.title}</h3>
+                <p className="text-sm text-white/85 mt-2 leading-relaxed">{guide.subtitle}</p>
+            </div>
+        </div>
+        <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm space-y-2">
+            {guide.intro.map((text) => <p key={text} className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">{text}</p>)}
+        </div>
+        {guide.sections.map((section) => <GuideSection key={section.title} section={section} accent={guide.accent} />)}
+        <div className="bg-gradient-to-br from-stone-900 to-stone-700 dark:from-stone-800 dark:to-stone-900 rounded-3xl p-5 text-white shadow-sm space-y-2">
+            {guide.closing.map((text) => <p key={text} className="text-sm leading-relaxed text-white/85">{text}</p>)}
+        </div>
+    </div>
+);
+};
+
+const GuidesLibrary = () => {
+const [selectedGuideId, setSelectedGuideId] = useState(null);
+const selectedGuide = GUIDE_LIBRARY.find((guide) => guide.id === selectedGuideId);
+
+if (selectedGuide) {
+    const practicalGuide = PRACTICAL_GUIDES.find((guide) => guide.id === selectedGuide.id);
+    return (
+        <div className="space-y-4 animate-fade-in">
+            <button onClick={() => setSelectedGuideId(null)} className="flex items-center gap-2 text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-100 text-sm font-bold active:scale-95 transition-transform">
+                <ChevronLeft size={18} /> Back to Guides
+            </button>
+            {practicalGuide ? <PracticalGuideView guide={practicalGuide} /> : <VisceralFatGuide />}
+        </div>
+    );
+}
+
+return (
+    <div className="space-y-4 animate-fade-in">
+        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-teal-500 p-6 rounded-3xl text-white shadow-lg shadow-violet-200/40 dark:shadow-none overflow-hidden relative">
+            <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full"></div>
+            <div className="relative">
+                <div className="w-11 h-11 bg-white/15 rounded-2xl flex items-center justify-center mb-4"><BookOpen size={22} /></div>
+                <h3 className="text-2xl font-black tracking-tight">Guides Library</h3>
+                <p className="text-sm text-white/85 mt-2 leading-relaxed">Quick, practical resources for building meals, tracking patterns, and staying consistent without perfection.</p>
+            </div>
+        </div>
+        <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+                <BookOpen size={18} className="text-violet-600 dark:text-violet-300" />
+                <h4 className="font-black text-stone-800 dark:text-stone-100">Table of contents</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {GUIDE_LIBRARY.map((guide) => {
+                    const GuideIcon = guide.icon;
+                    return (
+                        <button key={guide.id} onClick={() => setSelectedGuideId(guide.id)} className="w-full text-left bg-stone-50 dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl p-4 hover:border-violet-200 dark:hover:border-violet-700 active:scale-[0.98] transition-all">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-700 flex items-center justify-center shrink-0"><GuideIcon size={18} className={guide.accent} /></div>
+                                <div className="min-w-0">
+                                    <h5 className="font-black text-stone-800 dark:text-stone-100 leading-tight">{guide.title}</h5>
+                                    <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed mt-1">{guide.subtitle || guide.description}</p>
+                                </div>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 p-4 rounded-2xl flex gap-3">
+            <Info size={18} className="text-amber-600 dark:text-amber-300 shrink-0 mt-0.5" />
+            <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-200">Guides are educational and practical, not medical advice. Use them to notice patterns and build repeatable habits that fit your life.</p>
+        </div>
+    </div>
+);
+};
+
+
 const LearnView = ({ proteinRemaining, caloriesRemaining, onLogFood }) => {
 const [activeTab, setActiveTab] = useState('basics');
 const [filter, setFilter] = useState('all');
@@ -2529,7 +2763,7 @@ return (
             </button>
             <button onClick={() => setActiveTab('visceral')}
                 className={`min-w-0 flex-1 py-2.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === 'visceral' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-800 dark:text-stone-100' : 'text-stone-500'}`}>
-                <Heart size={15} /> Guide
+                <BookOpen size={15} /> Guides
             </button>
         </div>
         
@@ -2582,7 +2816,7 @@ return (
         ) : activeTab === 'fastfood' ? (
             <FastFoodGuide onLogFood={onLogFood} />
         ) : (
-            <VisceralFatGuide />
+            <GuidesLibrary />
         )}
     </div>
 );
